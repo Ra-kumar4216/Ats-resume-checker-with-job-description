@@ -103,6 +103,12 @@ Contributions are welcome. Since this is a single-file app, please:
 
 ---
 
+** 🚀 Live Demo: [ats-resume-checker-with-job-descrip.vercel.app](https://ats-resume-checker-with-job-descrip.vercel.app/) **
+
+** 🔗 Runs entirely in-browser — just open `index.html` or deploy it as a static site. **
+
+---
+
 ## Author
 
 **Ratan Kumar**
