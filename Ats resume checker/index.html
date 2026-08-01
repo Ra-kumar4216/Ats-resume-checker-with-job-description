@@ -3,15 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ATS Resume Tracker & Matcher</title>
-    <!-- Tailwind CSS CDN -->
+    <title>ATS Resume Tracker, Matcher & Tailor</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
-    <!-- PDF.js and Mammoth.js CDNs for client-side parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <style>
@@ -28,6 +25,103 @@
         background-color: rgba(244, 63, 94, 0.08);
         color: #fb7185;
         border: 1px solid rgba(244, 63, 94, 0.2);
+      }
+
+      /* ---------- Formatted CV preview (screen) ---------- */
+      #resume-page {
+        background: #ffffff;
+        color: #1a1a1a;
+        font-family: "Calibri", "Arial", "Helvetica", sans-serif;
+        width: 100%;
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 36px 40px;
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+        border-radius: 6px;
+        line-height: 1.45;
+      }
+      #resume-page .cv-name {
+        font-size: 22px;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 2px;
+        letter-spacing: 0.3px;
+      }
+      #resume-page .cv-contact {
+        font-size: 11.5px;
+        text-align: center;
+        color: #333;
+        margin-bottom: 14px;
+      }
+      #resume-page .cv-section {
+        margin-top: 14px;
+      }
+      #resume-page .cv-section-title {
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        border-bottom: 1.5px solid #1a1a1a;
+        padding-bottom: 2px;
+        margin-bottom: 6px;
+      }
+      #resume-page .cv-block-header {
+        font-size: 12.5px;
+        font-weight: 700;
+        margin-top: 8px;
+        margin-bottom: 1px;
+      }
+      #resume-page .cv-block-subheader {
+        font-size: 11.5px;
+        font-style: italic;
+        color: #333;
+        margin-bottom: 3px;
+      }
+      #resume-page ul.cv-bullets {
+        margin: 2px 0 4px 0;
+        padding-left: 18px;
+      }
+      #resume-page ul.cv-bullets li {
+        font-size: 11.5px;
+        margin-bottom: 2px;
+      }
+      #resume-page p.cv-line {
+        font-size: 11.5px;
+        margin: 2px 0;
+      }
+      mark.kw-hit {
+        background: #fef08a;
+        color: #1a1a1a;
+        padding: 0 1px;
+        border-radius: 2px;
+      }
+
+      /* ---------- Print / Save-as-PDF ---------- */
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+        #resume-page,
+        #resume-page * {
+          visibility: visible;
+        }
+        #resume-page {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          max-width: 100%;
+          box-shadow: none;
+          border-radius: 0;
+          padding: 18px 28px;
+        }
+        mark.kw-hit {
+          background: transparent;
+          padding: 0;
+        }
+        @page {
+          margin: 12mm;
+        }
       }
     </style>
   </head>
@@ -76,8 +170,8 @@
         </h1>
         <p class="text-slate-400 max-w-2xl mx-auto text-sm md:text-base">
           Upload your resume (PDF, DOCX, TXT) or paste the text, along with the
-          job description. Our smart scanner will analyze core keywords,
-          formatting, and industry-standard metrics.
+          job description. Score your match, then generate a JD-tailored version
+          that reorders your own content — nothing invented, nothing added.
         </p>
       </div>
 
@@ -176,7 +270,9 @@
               <textarea
                 id="resume-text"
                 class="w-full h-36 bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-300 placeholder-slate-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 text-xs transition-all"
-                placeholder="File content will automatically load here, or you can paste the text manually..."
+                placeholder="File content will automatically load here, or you can paste the text manually...
+
+Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Education' and bullet points (•, -, *) under each job/project — the tailoring feature relies on these to know where one job/project ends and the next begins."
               ></textarea>
             </div>
           </div>
@@ -202,27 +298,43 @@
             <textarea
               id="jd-text"
               class="w-full h-40 bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-300 placeholder-slate-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 text-sm transition-all"
-              placeholder="Optional — paste a target JD for a keyword-match score. Leave blank for a general ATS-friendliness score."
+              placeholder="Optional for scoring, but required to generate a tailored resume — reordering needs something to tailor against."
             ></textarea>
             <p class="text-[11px] text-slate-600 mt-2">
-              No JD? We'll still score your resume on structure, bullet usage,
-              action verbs, and quantified results.
+              No JD? You'll still get a general ATS-friendliness score on
+              structure, bullet usage, action verbs, and quantified results.
             </p>
           </div>
 
-          <!-- Submit Button -->
-          <button
-            id="analyze-btn"
-            onclick="analyzeResume()"
-            class="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg shadow-violet-500/10 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <i class="fa-solid fa-wand-magic-sparkles"></i>
-            <span>Analyze & Calculate ATS Score</span>
-          </button>
+          <!-- Action Buttons -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              id="analyze-btn"
+              onclick="analyzeResume()"
+              class="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg shadow-violet-500/10 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <span>Analyze & Calculate ATS Score</span>
+            </button>
+            <button
+              id="tailor-btn"
+              onclick="generateTailoredResume()"
+              class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-semibold py-3 px-6 rounded-xl transition-all flex items-center justify-center space-x-2"
+            >
+              <i class="fa-solid fa-arrow-up-wide-short"></i>
+              <span>Generate Tailored Resume</span>
+            </button>
+          </div>
           <p
             id="form-error"
-            class="hidden text-xs text-rose-400 text-center -mt-3"
+            class="hidden text-xs text-rose-400 text-center -mt-1"
           ></p>
+          <p class="text-[11px] text-slate-600 text-center -mt-1">
+            "Generate Tailored Resume" only
+            <strong>reorders your existing bullets</strong> within each
+            job/project so the most JD-relevant ones appear first. It never
+            adds, invents, or rewrites content.
+          </p>
         </div>
 
         <!-- Results Panel (Right Column) -->
@@ -386,6 +498,76 @@
           </div>
         </div>
       </div>
+
+      <!-- Tailored Resume Output (Initially Hidden, full-width below the two columns) -->
+      <div id="tailored-section" class="hidden mt-8 space-y-4">
+        <div
+          class="flex flex-wrap justify-between items-center gap-3 max-w-3xl mx-auto"
+        >
+          <h3
+            class="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2"
+          >
+            <i class="fa-solid fa-arrow-up-wide-short text-violet-400"></i>
+            Tailored Resume (Reordered) — Preview
+          </h3>
+          <div class="flex gap-2">
+            <label
+              class="flex items-center gap-1.5 text-xs text-slate-400 mr-2"
+            >
+              <input
+                type="checkbox"
+                id="highlight-toggle"
+                onchange="renderResumePreview()"
+                class="accent-violet-500"
+                checked
+              />
+              Highlight matched keywords
+            </label>
+            <button
+              onclick="printTailoredResume()"
+              class="text-xs bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-lg transition-all"
+            >
+              <i class="fa-solid fa-file-pdf"></i> Print / Save as PDF
+            </button>
+            <button
+              id="copy-tailored-btn"
+              onclick="copyTailoredResume()"
+              class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg transition-all"
+            >
+              <i class="fa-solid fa-copy"></i> Copy Text
+            </button>
+            <button
+              onclick="downloadTailoredResume()"
+              class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg transition-all"
+            >
+              <i class="fa-solid fa-download"></i> .txt
+            </button>
+          </div>
+        </div>
+        <p class="text-[11px] text-slate-500 max-w-3xl mx-auto">
+          Job/project headers (company, title, dates) are kept fixed in place.
+          Only the bullets underneath each one were reordered — highest
+          JD-keyword overlap first. No wording was changed or added.
+        </p>
+
+        <!-- The actual formatted CV -->
+        <div id="resume-page"></div>
+
+        <!-- Hidden plain-text version, used for Copy / Download .txt -->
+        <textarea
+          id="tailored-output"
+          class="hidden"
+          title="Tailored resume output"
+          placeholder="Tailored resume"
+        ></textarea>
+
+        <p class="text-[11px] text-amber-400/80 text-center max-w-3xl mx-auto">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          Always re-read the result before submitting — verify no bullet landed
+          in the wrong job/project block. "Print / Save as PDF" gives you a
+          single-column, ATS-safe layout with no tables or graphics.
+        </p>
+      </div>
     </main>
 
     <!-- Footer -->
@@ -402,8 +584,6 @@
         "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
 
       // Predefined list of popular tech and industry keywords for quick canonical matching.
-      // This is a SUPPLEMENT to dynamic JD extraction below, not the whole matching strategy —
-      // a fixed list alone misses anything not on it (e.g. "Terraform", "Snowflake", "Figma workflows").
       const industryKeywords = [
         "javascript",
         "react",
@@ -791,15 +971,14 @@
             freq[lw] = (freq[lw] || 0) + 1;
           }
         });
-        // keep tokens that recur (2+) since one-off capitalized words are often just sentence-starters
         Object.keys(freq).forEach((lw) => {
           if (freq[lw] >= 2) found.add(lw);
         });
 
-        return Array.from(found).slice(0, 40); // cap to keep the UI readable
+        return Array.from(found).slice(0, 40);
       }
 
-      // Common resume action verbs — presence signals impact-oriented writing (ATS + recruiter friendly)
+      // Common resume action verbs
       const ACTION_VERBS =
         /\b(managed|led|developed|created|improved|increased|reduced|achieved|designed|implemented|built|launched|coordinated|analyzed|delivered|streamlined|optimized|spearheaded|initiated|executed|drove|generated|negotiated|mentored|trained|automated|architected|orchestrated|resolved|established)\b/gi;
 
@@ -814,7 +993,6 @@
       }
 
       function countQuantifiedResults(text) {
-        // % figures, currency figures, or "Nx" style multipliers are strong ATS/recruiter signals
         const pct = countMatches(/\d+(\.\d+)?\s?%/g, text);
         const money = countMatches(/[$₹]\s?\d[\d,]*/g, text);
         const multiplier = countMatches(/\b\d+(\.\d+)?x\b/gi, text);
@@ -834,7 +1012,6 @@
         }
         errorEl.classList.add("hidden");
 
-        // Format / structure checklist — always computed, used in both modes
         const hasContact =
           /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(resumeText) ||
           /(\+?\d[\d\-\s().]{7,}\d)/.test(resumeText);
@@ -858,7 +1035,6 @@
         const hasJD = jdText.length > 0;
 
         if (hasJD) {
-          // ---- Mode A: JD keyword-match score ----
           const keywords = extractKeywordsFromJD(jdText);
           const matched = [];
           const missing = [];
@@ -883,7 +1059,6 @@
             hasProjects,
           });
         } else {
-          // ---- Mode B: general ATS-friendliness score (no JD to compare against) ----
           const detectedSkills = industryKeywords.filter((kw) => {
             const pattern = new RegExp("\\b" + escapeRegex(kw) + "\\b", "i");
             return pattern.test(resumeText);
@@ -958,22 +1133,21 @@
         const resultEl = document.getElementById("analysis-result");
         resultEl.classList.remove("hidden");
 
-        // Score circle
         const circumference = 377;
         const offset = circumference - (circumference * data.score) / 100;
         const circle = document.getElementById("score-circle");
         circle.style.strokeDashoffset = offset;
 
-        let color = "#f43f5e"; // rose
+        let color = "#f43f5e";
         let statusText = "Needs Significant Work";
         if (data.score >= 80) {
-          color = "#10b981"; // emerald
+          color = "#10b981";
           statusText = "Strong Resume";
         } else if (data.score >= 60) {
-          color = "#8b5cf6"; // violet
+          color = "#8b5cf6";
           statusText = "Good, Room to Improve";
         } else if (data.score >= 40) {
-          color = "#f59e0b"; // amber
+          color = "#f59e0b";
           statusText = "Weak — Needs Work";
         }
         circle.setAttribute("stroke", color);
@@ -1030,7 +1204,6 @@
             });
           }
         } else {
-          // General ATS-friendliness mode — no JD to compare against
           modeBadge.innerText = "General ATS Score (no JD)";
           subtitle.innerText = "ATS Score";
           heading.innerText = "Skills & Suggestions";
@@ -1068,7 +1241,6 @@
           }
         }
 
-        // Checklist icons
         setCheckIcon("chk-contact", data.hasContact);
         setCheckIcon("chk-experience", data.hasExperience);
         setCheckIcon("chk-education", data.hasEducation);
@@ -1086,6 +1258,336 @@
           el.innerHTML =
             '<i class="fa-solid fa-circle-xmark text-rose-500"></i>';
         }
+      }
+
+      // =================================================================
+      // TAILORED RESUME GENERATOR (reorder-only, no content invented)
+      // =================================================================
+
+      // Section headers we recognize as anchors. A line matches only if it's
+      // short (<40 chars) and matches one of these patterns — avoids false
+      // positives on normal bullet text that happens to contain these words.
+      const SECTION_PATTERNS = [
+        { key: "summary", pattern: /^(summary|profile|objective|about me)\b/i },
+        {
+          key: "skills",
+          pattern: /^(skills|technical skills|core competencies|key skills)\b/i,
+        },
+        {
+          key: "experience",
+          pattern:
+            /^(experience|work experience|employment history|professional experience)\b/i,
+        },
+        {
+          key: "projects",
+          pattern: /^(projects?|personal projects?|academic projects?)\b/i,
+        },
+        { key: "education", pattern: /^(education|academic background)\b/i },
+        {
+          key: "certifications",
+          pattern: /^(certifications?|certificates?|licenses?)\b/i,
+        },
+      ];
+
+      const BULLET_LINE_RE = /^\s*[•\-\*▪◦‣o]\s+/;
+
+      // Signal that a line is a NEW job/project header, not an accomplishment
+      // line — works even when the resume has no bullet characters at all.
+      // A header usually carries a date range ("Mar 2026 – Jun 2026"),
+      // "Ongoing", or "Present". Lines starting with GitHub:/Live:/Link: are
+      // treated as detail lines even if they happen to contain no date.
+      const BLOCK_HEADER_SIGNAL_RE =
+        /\b(19|20)\d{2}\b|\bongoing\b|\bpresent\b/i;
+      const DETAIL_LINE_PREFIX_RE = /^\s*(github|live|link|url)\s*:/i;
+
+      function parseResumeIntoSections(resumeText) {
+        const lines = resumeText.split("\n");
+        const sections = [];
+        let current = { key: "header", title: null, lines: [] };
+        sections.push(current);
+
+        lines.forEach((line) => {
+          const trimmed = line.trim();
+          const matchedSection =
+            trimmed.length > 0 &&
+            trimmed.length < 40 &&
+            SECTION_PATTERNS.find((sp) => sp.pattern.test(trimmed));
+          if (matchedSection) {
+            current = { key: matchedSection.key, title: line, lines: [] };
+            sections.push(current);
+          } else {
+            current.lines.push(line);
+          }
+        });
+        return sections;
+      }
+
+      // Splits a section's lines into "blocks": each block is one job/project
+      // header line (detected via a date range, "Ongoing", or "Present")
+      // followed by its accomplishment lines — with or without bullet
+      // characters. Only the accomplishment lines within a block get
+      // reordered; the header line that anchors each job/project never moves.
+      function splitIntoBlocks(sectionLines) {
+        const blocks = [];
+        let current = null;
+
+        sectionLines.forEach((line) => {
+          const trimmed = line.trim();
+          if (trimmed.length === 0) return;
+
+          const looksLikeHeader =
+            !DETAIL_LINE_PREFIX_RE.test(trimmed) &&
+            trimmed.length < 160 &&
+            BLOCK_HEADER_SIGNAL_RE.test(trimmed);
+
+          if (looksLikeHeader || current === null) {
+            current = { header: [line], bullets: [] };
+            blocks.push(current);
+          } else {
+            current.bullets.push(line);
+          }
+        });
+
+        // Fallback: nothing looked like a header (e.g. section has no dates
+        // at all) — keep everything as one block with no header so lines
+        // still render instead of silently disappearing.
+        if (blocks.length === 0) {
+          return [
+            {
+              header: [],
+              bullets: sectionLines.filter((l) => l.trim().length > 0),
+            },
+          ];
+        }
+        return blocks;
+      }
+
+      function scoreLineAgainstKeywords(line, keywords) {
+        const text = line.toLowerCase();
+        let score = 0;
+        keywords.forEach((kw) => {
+          const pattern = new RegExp(
+            "\\b" + escapeRegex(kw.toLowerCase()) + "\\b",
+            "i",
+          );
+          if (pattern.test(text)) score++;
+        });
+        return score;
+      }
+
+      // Skills lines ("Languages: Java, Python...") have no job-header
+      // structure — sort them as independent items, most JD-relevant first.
+      function reorderFlatLines(sectionLines, keywords) {
+        const nonEmpty = sectionLines.filter((l) => l.trim().length > 0);
+        return nonEmpty
+          .map((line, idx) => ({
+            line,
+            idx,
+            score: scoreLineAgainstKeywords(line, keywords),
+          }))
+          .sort((a, b) => b.score - a.score || a.idx - b.idx)
+          .map((s) => s.line);
+      }
+
+      function reorderSection(sectionKey, sectionLines, keywords) {
+        if (sectionKey === "skills") {
+          return reorderFlatLines(sectionLines, keywords);
+        }
+        const blocks = splitIntoBlocks(sectionLines);
+        const outputLines = [];
+        blocks.forEach((block) => {
+          outputLines.push(...block.header);
+          const scored = block.bullets.map((line, idx) => ({
+            line,
+            idx,
+            score: scoreLineAgainstKeywords(line, keywords),
+          }));
+          scored
+            .sort((a, b) => b.score - a.score || a.idx - b.idx)
+            .forEach((s) => outputLines.push(s.line));
+        });
+        return outputLines;
+      }
+
+      // Holds the last generated structured data so the preview can be
+      // re-rendered (e.g. toggling keyword highlighting) without recomputing.
+      let lastTailoredData = null; // { sections: [{key,title,lines}], keywords: [] }
+
+      const SECTION_DISPLAY_TITLES = {
+        summary: "Summary",
+        skills: "Skills",
+        experience: "Experience",
+        projects: "Projects",
+        education: "Education",
+        certifications: "Certifications",
+      };
+
+      function escapeHtml(str) {
+        return str
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      function highlightKeywords(text, keywords) {
+        let out = escapeHtml(text);
+        // Sort longer phrases first so multi-word keywords aren't partially
+        // clobbered by a shorter keyword contained inside them.
+        const sorted = [...keywords].sort((a, b) => b.length - a.length);
+        sorted.forEach((kw) => {
+          const pattern = new RegExp("\\b(" + escapeRegex(kw) + ")\\b", "gi");
+          out = out.replace(pattern, "<mark class='kw-hit'>$1</mark>");
+        });
+        return out;
+      }
+
+      function generateTailoredResume() {
+        const resumeText = document.getElementById("resume-text").value.trim();
+        const jdText = document.getElementById("jd-text").value.trim();
+        const errorEl = document.getElementById("form-error");
+
+        if (!resumeText) {
+          errorEl.innerText = "Please provide your resume text first.";
+          errorEl.classList.remove("hidden");
+          return;
+        }
+        if (!jdText) {
+          errorEl.innerText =
+            "Paste a job description to generate a tailored version — reordering needs something to tailor against.";
+          errorEl.classList.remove("hidden");
+          return;
+        }
+        errorEl.classList.add("hidden");
+
+        const keywords = extractKeywordsFromJD(jdText);
+        const sections = parseResumeIntoSections(resumeText);
+        const REORDERABLE = new Set(["experience", "projects", "skills"]);
+
+        const finalSections = sections.map((section) => {
+          const lines = REORDERABLE.has(section.key)
+            ? reorderSection(section.key, section.lines, keywords)
+            : section.lines;
+          return { key: section.key, title: section.title, lines };
+        });
+
+        lastTailoredData = { sections: finalSections, keywords };
+
+        renderResumePreview();
+        buildPlainTextOutput();
+
+        document.getElementById("tailored-section").classList.remove("hidden");
+        document
+          .getElementById("tailored-section")
+          .scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+
+      // Renders lastTailoredData into the formatted #resume-page as an
+      // actual CV layout: centered name/contact header, then each section
+      // with bold job/project headers and bulleted lines underneath.
+      function renderResumePreview() {
+        if (!lastTailoredData) return;
+        const { sections, keywords } = lastTailoredData;
+        const highlightOn = document.getElementById("highlight-toggle").checked;
+        const kwList = highlightOn ? keywords : [];
+
+        let html = "";
+
+        sections.forEach((section) => {
+          const nonEmptyLines = section.lines
+            .map((l) => l.trim())
+            .filter((l) => l.length > 0);
+
+          if (section.key === "header") {
+            if (nonEmptyLines.length === 0) return;
+            const [first, ...rest] = nonEmptyLines;
+            html += `<div class="cv-name">${escapeHtml(first)}</div>`;
+            if (rest.length > 0) {
+              html += `<div class="cv-contact">${escapeHtml(rest.join(" | "))}</div>`;
+            }
+            return;
+          }
+
+          const displayTitle =
+            SECTION_DISPLAY_TITLES[section.key] || section.title || "";
+          html += `<div class="cv-section"><div class="cv-section-title">${escapeHtml(displayTitle)}</div>`;
+
+          if (section.key === "skills") {
+            // Flat list — each line is an independent skill category, no job headers.
+            html += `<ul class="cv-bullets">`;
+            nonEmptyLines.forEach((line) => {
+              const cleaned = line.replace(BULLET_LINE_RE, "").trim();
+              html += `<li>${highlightKeywords(cleaned, kwList)}</li>`;
+            });
+            html += `</ul>`;
+          } else {
+            const blocks = splitIntoBlocks(section.lines);
+            blocks.forEach((block) => {
+              const headerLines = block.header
+                .map((l) => l.trim())
+                .filter((l) => l.length > 0);
+              headerLines.forEach((hl) => {
+                html += `<div class="cv-block-header">${highlightKeywords(hl, kwList)}</div>`;
+              });
+              if (block.bullets.length > 0) {
+                html += `<ul class="cv-bullets">`;
+                block.bullets.forEach((b) => {
+                  const cleaned = b.replace(BULLET_LINE_RE, "").trim();
+                  if (cleaned.length > 0) {
+                    html += `<li>${highlightKeywords(cleaned, kwList)}</li>`;
+                  }
+                });
+                html += `</ul>`;
+              }
+            });
+          }
+
+          html += `</div>`;
+        });
+
+        document.getElementById("resume-page").innerHTML = html;
+      }
+
+      // Builds the plain-text version (no HTML/highlighting) used for the
+      // Copy and Download .txt buttons, kept in sync with lastTailoredData.
+      function buildPlainTextOutput() {
+        if (!lastTailoredData) return;
+        const lines = [];
+        lastTailoredData.sections.forEach((section) => {
+          if (section.title) lines.push(section.title);
+          lines.push(...section.lines);
+        });
+        const text = lines
+          .join("\n")
+          .replace(/\n{3,}/g, "\n\n")
+          .trim();
+        document.getElementById("tailored-output").value = text;
+      }
+
+      function copyTailoredResume() {
+        const text = document.getElementById("tailored-output").value;
+        navigator.clipboard.writeText(text).then(() => {
+          const btn = document.getElementById("copy-tailored-btn");
+          const original = btn.innerHTML;
+          btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+          setTimeout(() => {
+            btn.innerHTML = original;
+          }, 1500);
+        });
+      }
+
+      function downloadTailoredResume() {
+        const text = document.getElementById("tailored-output").value;
+        const blob = new Blob([text], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "tailored-resume.txt";
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function printTailoredResume() {
+        window.print();
       }
     </script>
   </body>
