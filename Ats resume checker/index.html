@@ -80,10 +80,12 @@
       #resume-page ul.cv-bullets {
         margin: 2px 0 4px 0;
         padding-left: 18px;
+        list-style-type: disc;
       }
       #resume-page ul.cv-bullets li {
         font-size: 11.5px;
         margin-bottom: 2px;
+        display: list-item;
       }
       #resume-page p.cv-line {
         font-size: 11.5px;
@@ -152,7 +154,7 @@
           <span
             class="w-2 h-2 rounded-full bg-emerald-500 inline-block mr-1 animate-pulse"
           ></span>
-          Free AI Tool
+          100% Free • Runs in Your Browser
         </span>
       </div>
     </header>
@@ -523,6 +525,18 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
               />
               Highlight matched keywords
             </label>
+            <label
+              class="flex items-center gap-1.5 text-xs text-slate-400 mr-2"
+            >
+              <input
+                type="checkbox"
+                id="jd-only-toggle"
+                onchange="renderResumePreview(); buildPlainTextOutput();"
+                class="accent-violet-500"
+                checked
+              />
+              Show only JD-relevant lines
+            </label>
             <button
               onclick="printTailoredResume()"
               class="text-xs bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-lg transition-all"
@@ -545,9 +559,13 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
           </div>
         </div>
         <p class="text-[11px] text-slate-500 max-w-3xl mx-auto">
-          Job/project headers (company, title, dates) are kept fixed in place.
-          Only the bullets underneath each one were reordered — highest
-          JD-keyword overlap first. No wording was changed or added.
+          Job/project headers (company, title, dates) are always kept. By
+          default only bullets/skills that already exist in your resume AND
+          match the JD are shown (a block never goes empty — if nothing in it
+          matches, everything in that block stays visible so no job vanishes).
+          Uncheck "Show only JD-relevant lines" to see everything, reordered
+          instead of filtered. This tool never invents a skill or line that
+          wasn't already in your resume — it only shows or hides what's real.
         </p>
 
         <!-- The actual formatted CV -->
@@ -906,7 +924,25 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
-          const pageText = content.items.map((item) => item.str).join(" ");
+          // Every text fragment on the page has its own x/y position but
+          // pdf.js doesn't tell you where line breaks are. We rebuild them
+          // by watching the y coordinate: a real drop in y = a new line.
+          // (An earlier version of this also tried to auto-merge wrapped
+          // lines back together using font-size + gap heuristics — testing
+          // that against realistic geometry showed it could wrongly weld
+          // separate header lines, like name/title/contact, into one blob.
+          // Not worth that risk. Wrapped long lines are instead handled at
+          // the parsing layer below, on plain text, where it's testable.)
+          let pageText = "";
+          let lastY = null;
+          content.items.forEach((item) => {
+            const y = item.transform[5];
+            if (lastY !== null) {
+              pageText += Math.abs(y - lastY) > 2 ? "\n" : " ";
+            }
+            pageText += item.str;
+            lastY = y;
+          });
           fullText += pageText + "\n";
         }
         if (!fullText.trim()) {
@@ -916,10 +952,47 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
       }
 
       async function extractTextFromDocx(arrayBuffer) {
-        const result = await mammoth.extractRawText({
-          arrayBuffer: arrayBuffer,
-        });
-        return result.value;
+        // extractRawText() strips ALL paragraph/list structure and returns
+        // one blob of text, so — same failure as the old PDF path — section
+        // headers and bullets can no longer be told apart from body text.
+        // convertToHtml() keeps paragraph and list boundaries, which we then
+        // turn back into clean lines (with "• " markers for list items) so
+        // the downstream section/bullet parser has something to work with.
+        const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+        const container = document.createElement("div");
+        container.innerHTML = result.value;
+
+        const lines = [];
+        const BLOCK_TAGS = new Set(["P", "H1", "H2", "H3", "H4", "H5", "H6"]);
+
+        function walk(node) {
+          if (node.nodeType === Node.TEXT_NODE) {
+            const t = node.textContent.replace(/\s+/g, " ").trim();
+            if (t) lines.push(t);
+            return;
+          }
+          if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+          const tag = node.tagName;
+          if (tag === "UL" || tag === "OL") {
+            node.querySelectorAll(":scope > li").forEach((li) => {
+              const t = li.textContent.replace(/\s+/g, " ").trim();
+              if (t) lines.push("• " + t);
+            });
+            return;
+          }
+          if (BLOCK_TAGS.has(tag)) {
+            const t = node.textContent.replace(/\s+/g, " ").trim();
+            if (t) lines.push(t);
+            return;
+          }
+          // Table cells, divs, etc. — recurse into children rather than
+          // dropping the content.
+          node.childNodes.forEach(walk);
+        }
+
+        container.childNodes.forEach(walk);
+        return lines.join("\n").trim();
       }
 
       function finalizeExtractedText(fileName, text) {
@@ -1268,24 +1341,23 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
       // short (<40 chars) and matches one of these patterns — avoids false
       // positives on normal bullet text that happens to contain these words.
       const SECTION_PATTERNS = [
-        { key: "summary", pattern: /^(summary|profile|objective|about me)\b/i },
+        { key: "summary", pattern: /\b(summary|profile|objective|about me)\b/i },
         {
           key: "skills",
-          pattern: /^(skills|technical skills|core competencies|key skills)\b/i,
+          pattern: /\b(skills|competenc(?:y|ies))\b/i,
         },
         {
           key: "experience",
-          pattern:
-            /^(experience|work experience|employment history|professional experience)\b/i,
+          pattern: /\b(experience|employment history)\b/i,
         },
         {
           key: "projects",
-          pattern: /^(projects?|personal projects?|academic projects?)\b/i,
+          pattern: /\bprojects?\b/i,
         },
-        { key: "education", pattern: /^(education|academic background)\b/i },
+        { key: "education", pattern: /\b(education|academic background)\b/i },
         {
           key: "certifications",
-          pattern: /^(certifications?|certificates?|licenses?)\b/i,
+          pattern: /\b(certifications?|certificates?|licenses?)\b/i,
         },
       ];
 
@@ -1299,6 +1371,12 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
       const BLOCK_HEADER_SIGNAL_RE =
         /\b(19|20)\d{2}\b|\bongoing\b|\bpresent\b/i;
       const DETAIL_LINE_PREFIX_RE = /^\s*(github|live|link|url)\s*:/i;
+      // A header line ending in a bare dash/en-dash almost always means the
+      // PDF wrapped a "Company | Role  Mar 2026 – " date range onto a
+      // second line before the end date. That's the one case worth
+      // special-casing — it's a precise, checkable signal, unlike "no
+      // bullets seen yet" (which also matches an unrelated next job header).
+      const DANGLING_DASH_RE = /[-–—]\s*$/;
 
       function parseResumeIntoSections(resumeText) {
         const lines = resumeText.split("\n");
@@ -1340,6 +1418,21 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
             trimmed.length < 160 &&
             BLOCK_HEADER_SIGNAL_RE.test(trimmed);
 
+          const prevHeaderLine =
+            current && current.header.length > 0
+              ? current.header[current.header.length - 1].trim()
+              : null;
+          const continuesWrappedHeader =
+            current &&
+            current.bullets.length === 0 &&
+            prevHeaderLine &&
+            DANGLING_DASH_RE.test(prevHeaderLine);
+
+          if (looksLikeHeader && continuesWrappedHeader) {
+            current.header.push(line);
+            return;
+          }
+
           if (looksLikeHeader || current === null) {
             current = { header: [line], bullets: [] };
             blocks.push(current);
@@ -1373,6 +1466,20 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
           if (pattern.test(text)) score++;
         });
         return score;
+      }
+
+      // Keeps only lines that hit at least one JD keyword. Never invents or
+      // rewrites anything — it only hides lines that were already in the
+      // resume and scored zero. If filtering would empty out a whole block
+      // (e.g. a job with no literal keyword overlap), it falls back to
+      // showing all of that block's original lines rather than leaving a
+      // job title with nothing under it.
+      function filterByRelevance(lines, keywords) {
+        if (!keywords || keywords.length === 0) return lines;
+        const kept = lines.filter(
+          (l) => scoreLineAgainstKeywords(l, keywords) > 0,
+        );
+        return kept.length > 0 ? kept : lines;
       }
 
       // Skills lines ("Languages: Java, Python...") have no job-header
@@ -1488,6 +1595,7 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         if (!lastTailoredData) return;
         const { sections, keywords } = lastTailoredData;
         const highlightOn = document.getElementById("highlight-toggle").checked;
+        const jdOnly = document.getElementById("jd-only-toggle").checked;
         const kwList = highlightOn ? keywords : [];
 
         let html = "";
@@ -1501,9 +1609,14 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
             if (nonEmptyLines.length === 0) return;
             const [first, ...rest] = nonEmptyLines;
             html += `<div class="cv-name">${escapeHtml(first)}</div>`;
-            if (rest.length > 0) {
-              html += `<div class="cv-contact">${escapeHtml(rest.join(" | "))}</div>`;
-            }
+            // Each originally-extracted line (tagline, location/phone/email,
+            // links) stays on its own line instead of getting concatenated
+            // into one long pipe-chain — that concatenation was what made
+            // the header look bloated after the extraction fix started
+            // correctly splitting it into multiple lines.
+            rest.forEach((line) => {
+              html += `<div class="cv-contact">${escapeHtml(line)}</div>`;
+            });
             return;
           }
 
@@ -1513,12 +1626,22 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
 
           if (section.key === "skills") {
             // Flat list — each line is an independent skill category, no job headers.
+            const displayLines = jdOnly
+              ? filterByRelevance(nonEmptyLines, keywords)
+              : nonEmptyLines;
             html += `<ul class="cv-bullets">`;
-            nonEmptyLines.forEach((line) => {
+            displayLines.forEach((line) => {
               const cleaned = line.replace(BULLET_LINE_RE, "").trim();
               html += `<li>${highlightKeywords(cleaned, kwList)}</li>`;
             });
             html += `</ul>`;
+          } else if (section.key === "summary") {
+            // Prose, not a list — always render as one flowing paragraph
+            // regardless of how many fragments extraction produced.
+            const merged = nonEmptyLines.join(" ").replace(/\s+/g, " ").trim();
+            if (merged) {
+              html += `<p class="cv-line">${highlightKeywords(merged, kwList)}</p>`;
+            }
           } else {
             const blocks = splitIntoBlocks(section.lines);
             blocks.forEach((block) => {
@@ -1528,9 +1651,15 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
               headerLines.forEach((hl) => {
                 html += `<div class="cv-block-header">${highlightKeywords(hl, kwList)}</div>`;
               });
-              if (block.bullets.length > 0) {
+              // Job/project header line is never touched by the filter —
+              // only the accomplishment bullets underneath it are hidden or
+              // shown based on JD relevance.
+              const bulletsToShow = jdOnly
+                ? filterByRelevance(block.bullets, keywords)
+                : block.bullets;
+              if (bulletsToShow.length > 0) {
                 html += `<ul class="cv-bullets">`;
-                block.bullets.forEach((b) => {
+                bulletsToShow.forEach((b) => {
                   const cleaned = b.replace(BULLET_LINE_RE, "").trim();
                   if (cleaned.length > 0) {
                     html += `<li>${highlightKeywords(cleaned, kwList)}</li>`;
@@ -1551,11 +1680,44 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
       // Copy and Download .txt buttons, kept in sync with lastTailoredData.
       function buildPlainTextOutput() {
         if (!lastTailoredData) return;
+        const { sections, keywords } = lastTailoredData;
+        const jdOnly = document.getElementById("jd-only-toggle").checked;
+        const FILTERABLE = new Set(["experience", "projects", "skills"]);
+
         const lines = [];
-        lastTailoredData.sections.forEach((section) => {
+        sections.forEach((section) => {
           if (section.title) lines.push(section.title);
-          lines.push(...section.lines);
+
+          if (section.key === "summary") {
+            const merged = section.lines
+              .map((l) => l.trim())
+              .filter(Boolean)
+              .join(" ")
+              .replace(/\s+/g, " ")
+              .trim();
+            if (merged) lines.push(merged);
+            return;
+          }
+
+          if (!jdOnly || !FILTERABLE.has(section.key)) {
+            lines.push(...section.lines);
+            return;
+          }
+
+          if (section.key === "skills") {
+            const nonEmpty = section.lines.filter((l) => l.trim().length > 0);
+            lines.push(...filterByRelevance(nonEmpty, keywords));
+            return;
+          }
+
+          // experience / projects — keep every block header, filter bullets
+          const blocks = splitIntoBlocks(section.lines);
+          blocks.forEach((block) => {
+            lines.push(...block.header);
+            lines.push(...filterByRelevance(block.bullets, keywords));
+          });
         });
+
         const text = lines
           .join("\n")
           .replace(/\n{3,}/g, "\n\n")
