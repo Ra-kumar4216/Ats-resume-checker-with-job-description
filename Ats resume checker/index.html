@@ -51,7 +51,7 @@
         font-size: 11.5px;
         text-align: center;
         color: #333;
-        margin-bottom: 14px;
+        margin: 1px 0;
       }
       #resume-page .cv-section {
         margin-top: 14px;
@@ -531,7 +531,10 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
               <input
                 type="checkbox"
                 id="jd-only-toggle"
-                onchange="renderResumePreview(); buildPlainTextOutput();"
+                onchange="
+                  renderResumePreview();
+                  buildPlainTextOutput();
+                "
                 class="accent-violet-500"
                 checked
               />
@@ -787,6 +790,12 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
       }
 
       // ---------------- File upload handling ----------------
+      // Without this, dropping a file anywhere outside #drop-zone makes the
+      // browser navigate to/open that file directly, wiping the page.
+      ["dragover", "drop"].forEach((eventName) => {
+        window.addEventListener(eventName, (e) => e.preventDefault(), false);
+      });
+
       const dropZone = document.getElementById("drop-zone");
       const fileInput = document.getElementById("file-input");
       const uploadPrompt = document.getElementById("upload-prompt");
@@ -873,13 +882,20 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
 
         try {
           const reader = new FileReader();
+          // reader.onerror runs as an async callback, outside this try
+          // block's call stack — throwing inside it is an uncaught error,
+          // not something the surrounding try/catch can see. Handle it
+          // directly here (and give every branch an onerror) so a failed
+          // read always resets the UI instead of leaving the spinner stuck.
+          reader.onerror = () => {
+            console.error(reader.error);
+            alert("Failed to read file.");
+            resetUpload();
+          };
 
           if (fileType === "txt") {
             reader.onload = function (e) {
               finalizeExtractedText(file.name, e.target.result);
-            };
-            reader.onerror = () => {
-              throw new Error("read failed");
             };
             reader.readAsText(file);
           } else if (fileType === "pdf") {
@@ -924,15 +940,6 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
-          // Every text fragment on the page has its own x/y position but
-          // pdf.js doesn't tell you where line breaks are. We rebuild them
-          // by watching the y coordinate: a real drop in y = a new line.
-          // (An earlier version of this also tried to auto-merge wrapped
-          // lines back together using font-size + gap heuristics — testing
-          // that against realistic geometry showed it could wrongly weld
-          // separate header lines, like name/title/contact, into one blob.
-          // Not worth that risk. Wrapped long lines are instead handled at
-          // the parsing layer below, on plain text, where it's testable.)
           let pageText = "";
           let lastY = null;
           content.items.forEach((item) => {
@@ -952,13 +959,9 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
       }
 
       async function extractTextFromDocx(arrayBuffer) {
-        // extractRawText() strips ALL paragraph/list structure and returns
-        // one blob of text, so — same failure as the old PDF path — section
-        // headers and bullets can no longer be told apart from body text.
-        // convertToHtml() keeps paragraph and list boundaries, which we then
-        // turn back into clean lines (with "• " markers for list items) so
-        // the downstream section/bullet parser has something to work with.
-        const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+        const result = await mammoth.convertToHtml({
+          arrayBuffer: arrayBuffer,
+        });
         const container = document.createElement("div");
         container.innerHTML = result.value;
 
@@ -986,8 +989,6 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
             if (t) lines.push(t);
             return;
           }
-          // Table cells, divs, etc. — recurse into children rather than
-          // dropping the content.
           node.childNodes.forEach(walk);
         }
 
@@ -1010,16 +1011,28 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       }
 
+      // \b only fires between a word char and a non-word char. Keywords that
+      // START or END on a non-word char (e.g. "c++", "c#") never satisfy a
+      // trailing/leading \b next to punctuation, so a plain "\\bkw\\b" NEVER
+      // matches them in real text ("C++." / "C++ " both fail). This builds
+      // the correct boundary on each side based on the keyword's own edges.
+      function buildKeywordPattern(kw, flags) {
+        const escaped = escapeRegex(kw);
+        const startsWord = /^[a-zA-Z0-9]/.test(kw);
+        const endsWord = /[a-zA-Z0-9]$/.test(kw);
+        const left = startsWord ? "\\b" : "(?<![a-zA-Z0-9])";
+        const right = endsWord ? "\\b" : "(?![a-zA-Z0-9])";
+        return new RegExp(left + escaped + right, flags);
+      }
+
       function extractKeywordsFromJD(jdText) {
         const found = new Set();
 
-        // 1. Canonical industry keywords present in the JD
         industryKeywords.forEach((kw) => {
-          const pattern = new RegExp("\\b" + escapeRegex(kw) + "\\b", "i");
+          const pattern = buildKeywordPattern(kw, "i");
           if (pattern.test(jdText)) found.add(kw.toLowerCase());
         });
 
-        // 2. Signal-phrase extraction: "experience with X", "proficiency in Y", etc.
         const signalRegex =
           /(?:experience (?:with|in)|knowledge of|proficien(?:t|cy)? (?:in|with)|familiarity with|skilled? (?:in|with)|expertise in|hands-on with)\s+([a-zA-Z0-9+#.\/\- ]{2,40})/gi;
         let match;
@@ -1035,7 +1048,6 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
           }
         }
 
-        // 3. Capitalized tech-looking single tokens (proper nouns / tool names) not caught above
         const capWords = jdText.match(/\b[A-Z][a-zA-Z0-9+#.]{2,}\b/g) || [];
         const freq = {};
         capWords.forEach((w) => {
@@ -1051,7 +1063,6 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         return Array.from(found).slice(0, 40);
       }
 
-      // Common resume action verbs
       const ACTION_VERBS =
         /\b(managed|led|developed|created|improved|increased|reduced|achieved|designed|implemented|built|launched|coordinated|analyzed|delivered|streamlined|optimized|spearheaded|initiated|executed|drove|generated|negotiated|mentored|trained|automated|architected|orchestrated|resolved|established)\b/gi;
 
@@ -1112,7 +1123,7 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
           const matched = [];
           const missing = [];
           keywords.forEach((kw) => {
-            const pattern = new RegExp("\\b" + escapeRegex(kw) + "\\b", "i");
+            const pattern = buildKeywordPattern(kw, "i");
             (pattern.test(resumeText) ? matched : missing).push(kw);
           });
 
@@ -1133,7 +1144,7 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
           });
         } else {
           const detectedSkills = industryKeywords.filter((kw) => {
-            const pattern = new RegExp("\\b" + escapeRegex(kw) + "\\b", "i");
+            const pattern = buildKeywordPattern(kw, "i");
             return pattern.test(resumeText);
           });
 
@@ -1337,11 +1348,11 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
       // TAILORED RESUME GENERATOR (reorder-only, no content invented)
       // =================================================================
 
-      // Section headers we recognize as anchors. A line matches only if it's
-      // short (<40 chars) and matches one of these patterns — avoids false
-      // positives on normal bullet text that happens to contain these words.
       const SECTION_PATTERNS = [
-        { key: "summary", pattern: /\b(summary|profile|objective|about me)\b/i },
+        {
+          key: "summary",
+          pattern: /\b(summary|profile|objective|about me)\b/i,
+        },
         {
           key: "skills",
           pattern: /\b(skills|competenc(?:y|ies))\b/i,
@@ -1363,19 +1374,16 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
 
       const BULLET_LINE_RE = /^\s*[•\-\*▪◦‣o]\s+/;
 
-      // Signal that a line is a NEW job/project header, not an accomplishment
-      // line — works even when the resume has no bullet characters at all.
-      // A header usually carries a date range ("Mar 2026 – Jun 2026"),
-      // "Ongoing", or "Present". Lines starting with GitHub:/Live:/Link: are
-      // treated as detail lines even if they happen to contain no date.
+      // Broadened to also catch 2-digit years ('26) and slash dates
+      // (03/2026, 03/26) — the original 4-digit-only pattern silently
+      // failed to recognize headers on resumes using those formats, which
+      // (since the very first line of a section always becomes a block
+      // regardless of whether it "looks like" a header — see splitIntoBlocks)
+      // meant every job/project in that section got merged into one block
+      // and reordered together instead of within its own job.
       const BLOCK_HEADER_SIGNAL_RE =
-        /\b(19|20)\d{2}\b|\bongoing\b|\bpresent\b/i;
+        /\b(19|20)\d{2}\b|'\d{2}\b|\b\d{1,2}\/\d{2,4}\b|\bongoing\b|\bpresent\b/i;
       const DETAIL_LINE_PREFIX_RE = /^\s*(github|live|link|url)\s*:/i;
-      // A header line ending in a bare dash/en-dash almost always means the
-      // PDF wrapped a "Company | Role  Mar 2026 – " date range onto a
-      // second line before the end date. That's the one case worth
-      // special-casing — it's a precise, checkable signal, unlike "no
-      // bullets seen yet" (which also matches an unrelated next job header).
       const DANGLING_DASH_RE = /[-–—]\s*$/;
 
       function parseResumeIntoSections(resumeText) {
@@ -1400,11 +1408,6 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         return sections;
       }
 
-      // Splits a section's lines into "blocks": each block is one job/project
-      // header line (detected via a date range, "Ongoing", or "Present")
-      // followed by its accomplishment lines — with or without bullet
-      // characters. Only the accomplishment lines within a block get
-      // reordered; the header line that anchors each job/project never moves.
       function splitIntoBlocks(sectionLines) {
         const blocks = [];
         let current = null;
@@ -1415,6 +1418,7 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
 
           const looksLikeHeader =
             !DETAIL_LINE_PREFIX_RE.test(trimmed) &&
+            !BULLET_LINE_RE.test(trimmed) &&
             trimmed.length < 160 &&
             BLOCK_HEADER_SIGNAL_RE.test(trimmed);
 
@@ -1441,9 +1445,6 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
           }
         });
 
-        // Fallback: nothing looked like a header (e.g. section has no dates
-        // at all) — keep everything as one block with no header so lines
-        // still render instead of silently disappearing.
         if (blocks.length === 0) {
           return [
             {
@@ -1459,21 +1460,12 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         const text = line.toLowerCase();
         let score = 0;
         keywords.forEach((kw) => {
-          const pattern = new RegExp(
-            "\\b" + escapeRegex(kw.toLowerCase()) + "\\b",
-            "i",
-          );
+          const pattern = buildKeywordPattern(kw.toLowerCase(), "i");
           if (pattern.test(text)) score++;
         });
         return score;
       }
 
-      // Keeps only lines that hit at least one JD keyword. Never invents or
-      // rewrites anything — it only hides lines that were already in the
-      // resume and scored zero. If filtering would empty out a whole block
-      // (e.g. a job with no literal keyword overlap), it falls back to
-      // showing all of that block's original lines rather than leaving a
-      // job title with nothing under it.
       function filterByRelevance(lines, keywords) {
         if (!keywords || keywords.length === 0) return lines;
         const kept = lines.filter(
@@ -1482,8 +1474,6 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         return kept.length > 0 ? kept : lines;
       }
 
-      // Skills lines ("Languages: Java, Python...") have no job-header
-      // structure — sort them as independent items, most JD-relevant first.
       function reorderFlatLines(sectionLines, keywords) {
         const nonEmpty = sectionLines.filter((l) => l.trim().length > 0);
         return nonEmpty
@@ -1516,9 +1506,7 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         return outputLines;
       }
 
-      // Holds the last generated structured data so the preview can be
-      // re-rendered (e.g. toggling keyword highlighting) without recomputing.
-      let lastTailoredData = null; // { sections: [{key,title,lines}], keywords: [] }
+      let lastTailoredData = null;
 
       const SECTION_DISPLAY_TITLES = {
         summary: "Summary",
@@ -1538,11 +1526,14 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
 
       function highlightKeywords(text, keywords) {
         let out = escapeHtml(text);
-        // Sort longer phrases first so multi-word keywords aren't partially
-        // clobbered by a shorter keyword contained inside them.
         const sorted = [...keywords].sort((a, b) => b.length - a.length);
         sorted.forEach((kw) => {
-          const pattern = new RegExp("\\b(" + escapeRegex(kw) + ")\\b", "gi");
+          const escaped = escapeRegex(kw);
+          const startsWord = /^[a-zA-Z0-9]/.test(kw);
+          const endsWord = /[a-zA-Z0-9]$/.test(kw);
+          const left = startsWord ? "\\b" : "(?<![a-zA-Z0-9])";
+          const right = endsWord ? "\\b" : "(?![a-zA-Z0-9])";
+          const pattern = new RegExp(left + "(" + escaped + ")" + right, "gi");
           out = out.replace(pattern, "<mark class='kw-hit'>$1</mark>");
         });
         return out;
@@ -1588,9 +1579,6 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
           .scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
 
-      // Renders lastTailoredData into the formatted #resume-page as an
-      // actual CV layout: centered name/contact header, then each section
-      // with bold job/project headers and bulleted lines underneath.
       function renderResumePreview() {
         if (!lastTailoredData) return;
         const { sections, keywords } = lastTailoredData;
@@ -1609,11 +1597,6 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
             if (nonEmptyLines.length === 0) return;
             const [first, ...rest] = nonEmptyLines;
             html += `<div class="cv-name">${escapeHtml(first)}</div>`;
-            // Each originally-extracted line (tagline, location/phone/email,
-            // links) stays on its own line instead of getting concatenated
-            // into one long pipe-chain — that concatenation was what made
-            // the header look bloated after the extraction fix started
-            // correctly splitting it into multiple lines.
             rest.forEach((line) => {
               html += `<div class="cv-contact">${escapeHtml(line)}</div>`;
             });
@@ -1625,7 +1608,6 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
           html += `<div class="cv-section"><div class="cv-section-title">${escapeHtml(displayTitle)}</div>`;
 
           if (section.key === "skills") {
-            // Flat list — each line is an independent skill category, no job headers.
             const displayLines = jdOnly
               ? filterByRelevance(nonEmptyLines, keywords)
               : nonEmptyLines;
@@ -1636,8 +1618,6 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
             });
             html += `</ul>`;
           } else if (section.key === "summary") {
-            // Prose, not a list — always render as one flowing paragraph
-            // regardless of how many fragments extraction produced.
             const merged = nonEmptyLines.join(" ").replace(/\s+/g, " ").trim();
             if (merged) {
               html += `<p class="cv-line">${highlightKeywords(merged, kwList)}</p>`;
@@ -1651,9 +1631,6 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
               headerLines.forEach((hl) => {
                 html += `<div class="cv-block-header">${highlightKeywords(hl, kwList)}</div>`;
               });
-              // Job/project header line is never touched by the filter —
-              // only the accomplishment bullets underneath it are hidden or
-              // shown based on JD relevance.
               const bulletsToShow = jdOnly
                 ? filterByRelevance(block.bullets, keywords)
                 : block.bullets;
@@ -1676,8 +1653,6 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         document.getElementById("resume-page").innerHTML = html;
       }
 
-      // Builds the plain-text version (no HTML/highlighting) used for the
-      // Copy and Download .txt buttons, kept in sync with lastTailoredData.
       function buildPlainTextOutput() {
         if (!lastTailoredData) return;
         const { sections, keywords } = lastTailoredData;
@@ -1710,7 +1685,6 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
             return;
           }
 
-          // experience / projects — keep every block header, filter bullets
           const blocks = splitIntoBlocks(section.lines);
           blocks.forEach((block) => {
             lines.push(...block.header);
