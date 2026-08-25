@@ -531,10 +531,7 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
               <input
                 type="checkbox"
                 id="jd-only-toggle"
-                onchange="
-                  renderResumePreview();
-                  buildPlainTextOutput();
-                "
+                onchange="renderResumePreview(); buildPlainTextOutput();"
                 class="accent-violet-500"
                 checked
               />
@@ -959,9 +956,7 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
       }
 
       async function extractTextFromDocx(arrayBuffer) {
-        const result = await mammoth.convertToHtml({
-          arrayBuffer: arrayBuffer,
-        });
+        const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
         const container = document.createElement("div");
         container.innerHTML = result.value;
 
@@ -1349,10 +1344,7 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
       // =================================================================
 
       const SECTION_PATTERNS = [
-        {
-          key: "summary",
-          pattern: /\b(summary|profile|objective|about me)\b/i,
-        },
+        { key: "summary", pattern: /\b(summary|profile|objective|about me)\b/i },
         {
           key: "skills",
           pattern: /\b(skills|competenc(?:y|ies))\b/i,
@@ -1381,8 +1373,18 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
       // regardless of whether it "looks like" a header — see splitIntoBlocks)
       // meant every job/project in that section got merged into one block
       // and reordered together instead of within its own job.
+      //
+      // Also treat a bare "|" as a header signal. Personal-project headers
+      // often carry no date at all — e.g. "TaskManagement3 – Agile Task
+      // Tracker | Personal Project" — so date-only detection missed them
+      // entirely, and that header (plus its bullets) got silently absorbed
+      // as bullets of whichever project came before it. The next project's
+      // header met the same fate, compounding it further down the section.
+      // A bare, non-bulleted "|" line is a near-universal header convention
+      // ("Company | Role", "Project | Type") and essentially never appears
+      // in accomplishment prose, so it's a safe extra signal.
       const BLOCK_HEADER_SIGNAL_RE =
-        /\b(19|20)\d{2}\b|'\d{2}\b|\b\d{1,2}\/\d{2,4}\b|\bongoing\b|\bpresent\b/i;
+        /\b(19|20)\d{2}\b|'\d{2}\b|\b\d{1,2}\/\d{2,4}\b|\bongoing\b|\bpresent\b|\|/i;
       const DETAIL_LINE_PREFIX_RE = /^\s*(github|live|link|url)\s*:/i;
       const DANGLING_DASH_RE = /[-–—]\s*$/;
 
@@ -1472,6 +1474,40 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
           (l) => scoreLineAgainstKeywords(l, keywords) > 0,
         );
         return kept.length > 0 ? kept : lines;
+      }
+
+      // Skills lines are usually a label plus a comma/pipe list, e.g.
+      // "Languages: Java, Python, C++, Go, Ruby". filterByRelevance only
+      // decides whether to keep the WHOLE line (it qualifies if even one
+      // item matches the JD) — it can't narrow "Java, Python, C++, Go, Ruby"
+      // down to just "Java, Python" when only those two are JD-relevant.
+      // This splits the line into individual items and drops the ones with
+      // no JD match, same never-invent/never-empty rule as everywhere else:
+      // if trimming would leave zero items, keep the line as originally
+      // written rather than showing an empty category.
+      function splitSkillLineIntoItems(line) {
+        const cleaned = line.replace(BULLET_LINE_RE, "").trim();
+        const labelMatch = cleaned.match(/^([^:]{2,30}):\s*(.+)$/);
+        const label = labelMatch ? labelMatch[1] : null;
+        const rest = labelMatch ? labelMatch[2] : cleaned;
+        const items = rest
+          .split(/,|\|/)
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+        return { label, items };
+      }
+
+      function narrowSkillLineToRelevantItems(line, keywords) {
+        if (!keywords || keywords.length === 0) return line;
+        const { label, items } = splitSkillLineIntoItems(line);
+        if (items.length <= 1) return line;
+        const kept = items.filter(
+          (item) => scoreLineAgainstKeywords(item, keywords) > 0,
+        );
+        const finalItems = kept.length > 0 ? kept : items;
+        return label
+          ? `${label}: ${finalItems.join(", ")}`
+          : finalItems.join(", ");
       }
 
       function reorderFlatLines(sectionLines, keywords) {
@@ -1608,9 +1644,14 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
           html += `<div class="cv-section"><div class="cv-section-title">${escapeHtml(displayTitle)}</div>`;
 
           if (section.key === "skills") {
-            const displayLines = jdOnly
+            const relevantLines = jdOnly
               ? filterByRelevance(nonEmptyLines, keywords)
               : nonEmptyLines;
+            const displayLines = jdOnly
+              ? relevantLines.map((line) =>
+                  narrowSkillLineToRelevantItems(line, keywords),
+                )
+              : relevantLines;
             html += `<ul class="cv-bullets">`;
             displayLines.forEach((line) => {
               const cleaned = line.replace(BULLET_LINE_RE, "").trim();
@@ -1681,7 +1722,12 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
 
           if (section.key === "skills") {
             const nonEmpty = section.lines.filter((l) => l.trim().length > 0);
-            lines.push(...filterByRelevance(nonEmpty, keywords));
+            const relevant = filterByRelevance(nonEmpty, keywords);
+            lines.push(
+              ...relevant.map((line) =>
+                narrowSkillLineToRelevantItems(line, keywords),
+              ),
+            );
             return;
           }
 
