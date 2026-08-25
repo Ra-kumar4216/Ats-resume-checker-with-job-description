@@ -41,26 +41,27 @@
         line-height: 1.45;
       }
       #resume-page .cv-name {
-        font-size: 22px;
+        font-size: 24px;
         font-weight: 700;
-        text-align: center;
-        margin-bottom: 2px;
-        letter-spacing: 0.3px;
+        color: #1d4ed8;
+        text-align: left;
+        margin-bottom: 3px;
+        letter-spacing: 0.2px;
       }
       #resume-page .cv-contact {
-        font-size: 11.5px;
-        text-align: center;
-        color: #333;
-        margin: 1px 0;
+        font-size: 11px;
+        text-align: left;
+        color: #555;
+        margin: 0 0 14px 0;
       }
       #resume-page .cv-section {
         margin-top: 14px;
       }
       #resume-page .cv-section-title {
-        font-size: 13px;
+        font-size: 12.5px;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.6px;
+        letter-spacing: 0.7px;
         border-bottom: 1.5px solid #1a1a1a;
         padding-bottom: 2px;
         margin-bottom: 6px;
@@ -70,6 +71,29 @@
         font-weight: 700;
         margin-top: 8px;
         margin-bottom: 1px;
+      }
+      /* Company/Title on the left, date range right-aligned on the same
+         line — the previous version dumped the whole raw header line
+         (title, company, dates, location) as one bold block, which read
+         as a wall of text instead of a scannable resume entry. */
+      #resume-page .cv-block-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+        margin-top: 8px;
+        margin-bottom: 1px;
+      }
+      #resume-page .cv-block-title {
+        font-size: 12.5px;
+        font-weight: 700;
+      }
+      #resume-page .cv-block-date {
+        font-size: 11px;
+        font-style: italic;
+        color: #555;
+        white-space: nowrap;
+        flex-shrink: 0;
       }
       #resume-page .cv-block-subheader {
         font-size: 11.5px;
@@ -91,38 +115,99 @@
         font-size: 11.5px;
         margin: 2px 0;
       }
+      /* Single dot-separated line for Skills instead of one row per
+         category — reads cleaner and matches how most modern resume
+         templates present a skills block. */
+      #resume-page p.cv-skills-line {
+        font-size: 11.5px;
+        margin: 2px 0;
+        line-height: 1.6;
+      }
       mark.kw-hit {
         background: #fef08a;
         color: #1a1a1a;
         padding: 0 1px;
         border-radius: 2px;
       }
+      .print-brand {
+        display: none;
+      }
 
       /* ---------- Print / Save-as-PDF ---------- */
       @media print {
-        body * {
-          visibility: hidden;
+        @page {
+          size: A4;
+          margin: 0;
+        }
+
+        html,
+        body {
+          width: 210mm;
+          min-height: 297mm;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #ffffff !important;
+        }
+
+        /* Print only the generated resume, never the app shell, controls,
+           instructions, result card, date, or screen footer. */
+        body > header,
+        body > footer,
+        main > *:not(#tailored-section),
+        #tailored-section > *:not(#resume-page) {
+          display: none !important;
+        }
+        body > main,
+        #tailored-section,
+        #resume-page {
+          display: block !important;
+          visibility: visible !important;
+          position: static !important;
+          width: auto !important;
+          max-width: none !important;
+          min-height: auto !important;
+          margin: 0 !important;
         }
         #resume-page,
         #resume-page * {
-          visibility: visible;
+          visibility: visible !important;
         }
         #resume-page {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          max-width: 100%;
           box-shadow: none;
           border-radius: 0;
-          padding: 18px 28px;
+          padding: 10mm 12mm 16mm;
+          color: #1a1a1a;
+          overflow: visible;
         }
+        #resume-page .cv-section {
+          break-inside: auto;
+          page-break-inside: auto;
+        }
+        #resume-page .cv-section-title,
+        #resume-page .cv-block-header-row {
+          break-after: avoid;
+          page-break-after: avoid;
+        }
+        #resume-page .cv-block-header-row,
+        #resume-page ul.cv-bullets,
+        #resume-page p.cv-line,
+        #resume-page p.cv-skills-line {
+          widows: 2;
+          orphans: 2;
+        }
+        #resume-page .print-brand {
+          display: block;
+          position: fixed;
+          right: 8mm;
+          bottom: 5mm;
+          color: #777;
+          font-size: 8px;
+          letter-spacing: 0.2px;
+        }
+
         mark.kw-hit {
           background: transparent;
           padding: 0;
-        }
-        @page {
-          margin: 12mm;
         }
       }
     </style>
@@ -474,7 +559,10 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
                 <div
                   class="flex items-center justify-between text-xs bg-slate-950 p-2.5 rounded border border-slate-800/80"
                 >
-                  <span class="text-slate-400">Work Experience Section</span>
+                  <span class="text-slate-400"
+                    >Work / Internship Experience Section</span
+                  >
+
                   <span id="chk-experience"
                     ><i class="fa-solid fa-circle-xmark text-rose-500"></i
                   ></span>
@@ -510,7 +598,7 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
             class="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2"
           >
             <i class="fa-solid fa-arrow-up-wide-short text-violet-400"></i>
-            Tailored Resume (Reordered) — Preview
+            Tailored Resume (Reordered: Experience, Projects & Skills) — Preview
           </h3>
           <div class="flex gap-2">
             <label
@@ -531,7 +619,10 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
               <input
                 type="checkbox"
                 id="jd-only-toggle"
-                onchange="renderResumePreview(); buildPlainTextOutput();"
+                onchange="
+                  renderResumePreview();
+                  buildPlainTextOutput();
+                "
                 class="accent-violet-500"
                 checked
               />
@@ -559,13 +650,16 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
           </div>
         </div>
         <p class="text-[11px] text-slate-500 max-w-3xl mx-auto">
-          Job/project headers (company, title, dates) are always kept. By
-          default only bullets/skills that already exist in your resume AND
-          match the JD are shown (a block never goes empty — if nothing in it
-          matches, everything in that block stays visible so no job vanishes).
-          Uncheck "Show only JD-relevant lines" to see everything, reordered
-          instead of filtered. This tool never invents a skill or line that
-          wasn't already in your resume — it only shows or hides what's real.
+          Only Experience, Projects, and Skills are reordered. Summary,
+          Education, Certifications, and the resume header stay in their
+          original order. Job/project headers (company, title, dates) are always
+          kept. By default only bullets/skills that already exist in your resume
+          AND match the JD are shown (a block never goes empty — if nothing in
+          it matches, everything in that block stays visible so no job
+          vanishes). Uncheck "Show only JD-relevant lines" to see everything,
+          reordered instead of filtered. This tool never invents a skill or line
+          that wasn't already in your resume — it only shows or hides what's
+          real.
         </p>
 
         <!-- The actual formatted CV -->
@@ -611,7 +705,7 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         "mysql",
         "java",
         "spring",
-        "boot",
+
         "python",
         "django",
         "html",
@@ -621,8 +715,7 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         "docker",
         "aws",
         "kubernetes",
-        "rest",
-        "api",
+
         "typescript",
         "c++",
         "sql",
@@ -632,7 +725,7 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         "vue",
         "scrum",
         "agile",
-        "testing",
+
         "jira",
         "android",
         "ios",
@@ -640,14 +733,9 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         "kotlin",
         "devops",
         "ci/cd",
-        "frontend",
-        "backend",
-        "fullstack",
-        "database",
+
         "machine learning",
-        "ai",
-        "data science",
-        "cloud",
+
         "c#",
         "dotnet",
         "postgresql",
@@ -660,15 +748,12 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         "redux",
         "nextjs",
         "figma",
-        "analytics",
-        "design",
-        "security",
+
         "terraform",
         "azure",
         "gcp",
         "linux",
-        "communication",
-        "leadership",
+
         "project management",
         "salesforce",
         "excel",
@@ -766,7 +851,68 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         "qualifications",
       ]);
 
+      // Short or broad words are poor standalone signals. They are intentionally
+      // excluded even when they appear in the JD so generic mentions cannot
+      // inflate the match score or make unrelated lines look relevant.
+      const GENERIC_JD_TERMS = new Set([
+        "ai",
+        "api",
+        "rest",
+        "boot",
+        "cloud",
+        "design",
+        "test",
+        "testing",
+        "data",
+        "work",
+        "team",
+        "software",
+        "technology",
+        "technologies",
+        "development",
+        "developer",
+        "engineering",
+        "engineer",
+        "communication",
+        "leadership",
+        "management",
+        "analytics",
+      ]);
+
+      function normalizeKeyword(value) {
+        return value.replace(/\s+/g, " ").trim().toLowerCase();
+      }
+
+      function isUsableKeyword(value) {
+        const keyword = normalizeKeyword(value).replace(
+          /^[,;:.\-]+|[,;:.\-]+$/g,
+          "",
+        );
+        if (
+          !keyword ||
+          STOPWORDS.has(keyword) ||
+          GENERIC_JD_TERMS.has(keyword)
+        ) {
+          return false;
+        }
+        const compact = keyword.replace(/[^a-z0-9+#.]/gi, "");
+        if (compact.length < 3 && !/^(c\+\+|c#|r)$/.test(keyword)) return false;
+        const tokens = keyword.split(/\s+/).filter(Boolean);
+        if (tokens.length > 5) return false;
+        const hasMeaningfulToken = tokens.some(
+          (token) => !STOPWORDS.has(token) && !GENERIC_JD_TERMS.has(token),
+        );
+        return (
+          hasMeaningfulToken &&
+          tokens.every((token) => {
+            const normalized = token.replace(/[^a-z0-9+#.]/gi, "");
+            return normalized.length >= 2 && !STOPWORDS.has(token);
+          })
+        );
+      }
+
       // ---------------- Word counters ----------------
+
       document
         .getElementById("resume-text")
         .addEventListener("input", function () {
@@ -956,7 +1102,9 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
       }
 
       async function extractTextFromDocx(arrayBuffer) {
-        const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+        const result = await mammoth.convertToHtml({
+          arrayBuffer: arrayBuffer,
+        });
         const container = document.createElement("div");
         container.innerHTML = result.value;
 
@@ -1022,37 +1170,38 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
 
       function extractKeywordsFromJD(jdText) {
         const found = new Set();
+        const addKeyword = (value) => {
+          const keyword = normalizeKeyword(value);
+          if (isUsableKeyword(keyword)) found.add(keyword);
+        };
 
         industryKeywords.forEach((kw) => {
-          const pattern = buildKeywordPattern(kw, "i");
-          if (pattern.test(jdText)) found.add(kw.toLowerCase());
+          const normalized = normalizeKeyword(kw);
+          if (!isUsableKeyword(normalized)) return;
+          if (buildKeywordPattern(normalized, "i").test(jdText))
+            addKeyword(normalized);
         });
 
         const signalRegex =
-          /(?:experience (?:with|in)|knowledge of|proficien(?:t|cy)? (?:in|with)|familiarity with|skilled? (?:in|with)|expertise in|hands-on with)\s+([a-zA-Z0-9+#.\/\- ]{2,40})/gi;
+          /(?:experience (?:with|in)|knowledge of|proficien(?:t|cy)? (?:in|with)|familiarity with|skilled? (?:in|with)|expertise in|hands-on with)\s+([a-zA-Z0-9+#.\/\- ]{2,50})/gi;
         let match;
         while ((match = signalRegex.exec(jdText)) !== null) {
-          let phrase = match[1].split(/,| and | or |\.|;/i)[0].trim();
-          phrase = phrase.replace(/\s+/g, " ");
-          if (
-            phrase.length > 1 &&
-            phrase.length < 30 &&
-            !STOPWORDS.has(phrase.toLowerCase())
-          ) {
-            found.add(phrase.toLowerCase());
-          }
+          const phrase = match[1]
+            .split(/,| and | or |\.|;|\bbut\b|\bplus\b/i)[0]
+            .trim()
+            .replace(/\s+/g, " ");
+          addKeyword(phrase);
         }
 
         const capWords = jdText.match(/\b[A-Z][a-zA-Z0-9+#.]{2,}\b/g) || [];
         const freq = {};
-        capWords.forEach((w) => {
-          const lw = w.toLowerCase();
-          if (!STOPWORDS.has(lw) && lw.length > 2) {
-            freq[lw] = (freq[lw] || 0) + 1;
-          }
+        capWords.forEach((word) => {
+          const keyword = normalizeKeyword(word);
+          if (isUsableKeyword(keyword))
+            freq[keyword] = (freq[keyword] || 0) + 1;
         });
-        Object.keys(freq).forEach((lw) => {
-          if (freq[lw] >= 2) found.add(lw);
+        Object.keys(freq).forEach((keyword) => {
+          if (freq[keyword] >= 2) addKeyword(keyword);
         });
 
         return Array.from(found).slice(0, 40);
@@ -1068,7 +1217,7 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
 
       function countBulletLines(text) {
         const lines = text.split("\n");
-        return lines.filter((l) => /^\s*[•\-\*▪◦‣o]\s+/.test(l)).length;
+        return lines.filter((l) => BULLET_LINE_RE.test(l)).length;
       }
 
       function countQuantifiedResults(text) {
@@ -1076,6 +1225,20 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         const money = countMatches(/[$₹]\s?\d[\d,]*/g, text);
         const multiplier = countMatches(/\b\d+(\.\d+)?x\b/gi, text);
         return pct + money + multiplier;
+      }
+
+      function getChecklistState(resumeText) {
+        const sections = parseResumeIntoSections(resumeText);
+        const sectionKeys = new Set(sections.map((section) => section.key));
+        return {
+          sections,
+          hasContact:
+            /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(resumeText) ||
+            /(\+?\d[\d\-\s().]{7,}\d)/.test(resumeText),
+          hasExperience: sectionKeys.has("experience"),
+          hasEducation: sectionKeys.has("education"),
+          hasProjects: sectionKeys.has("projects"),
+        };
       }
 
       function analyzeResume() {
@@ -1091,24 +1254,15 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         }
         errorEl.classList.add("hidden");
 
-        const hasContact =
-          /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(resumeText) ||
-          /(\+?\d[\d\-\s().]{7,}\d)/.test(resumeText);
-        const hasExperience =
-          /\b(work experience|employment history|professional experience|experience)\b/i.test(
-            resumeText,
-          );
-        const hasEducation =
-          /\b(education|degree|university|college|bachelor|master|b\.?s\.?|m\.?s\.?|b\.?tech|m\.?tech)\b/i.test(
-            resumeText,
-          );
-        const hasProjects = /\bprojects?\b/i.test(resumeText);
+        const { hasContact, hasExperience, hasEducation, hasProjects } =
+          getChecklistState(resumeText);
         const checklist = [
           hasContact,
           hasExperience,
           hasEducation,
           hasProjects,
         ];
+
         const checksPassed = checklist.filter(Boolean).length;
 
         const hasJD = jdText.length > 0;
@@ -1122,8 +1276,10 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
             (pattern.test(resumeText) ? matched : missing).push(kw);
           });
 
+          // A JD without usable skill signals is not a successful keyword match.
+          // Give it zero keyword points rather than the old unconditional 80.
           const keywordScore =
-            keywords.length > 0 ? (matched.length / keywords.length) * 80 : 80;
+            keywords.length > 0 ? (matched.length / keywords.length) * 80 : 0;
           const checklistScore = (checksPassed / 4) * 20;
           const totalScore = Math.round(keywordScore + checklistScore);
 
@@ -1136,6 +1292,7 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
             hasExperience,
             hasEducation,
             hasProjects,
+            noKeywords: keywords.length === 0,
           });
         } else {
           const detectedSkills = industryKeywords.filter((kw) => {
@@ -1170,7 +1327,10 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
           if (!hasContact)
             suggestions.push("Add a clear email and phone number");
           if (!hasExperience)
-            suggestions.push('Add a labeled "Experience" section');
+            suggestions.push(
+              'Add a labeled "Work Experience" or "Internship Experience" section',
+            );
+
           if (!hasEducation)
             suggestions.push('Add a labeled "Education" section');
           if (!hasProjects)
@@ -1270,7 +1430,10 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
             });
           }
 
-          if (data.missing.length === 0) {
+          if (data.noKeywords) {
+            missingContainer.innerHTML =
+              '<span class="text-xs text-amber-400">No actionable keywords found in this JD; keyword match points were not awarded.</span>';
+          } else if (data.missing.length === 0) {
             missingContainer.innerHTML =
               '<span class="text-xs text-slate-600">Nothing missing — great coverage!</span>';
           } else {
@@ -1344,27 +1507,59 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
       // =================================================================
 
       const SECTION_PATTERNS = [
-        { key: "summary", pattern: /\b(summary|profile|objective|about me)\b/i },
+        {
+          key: "summary",
+          pattern:
+            /^(?:(?:professional|career)\s+)?(?:summary|profile|objective|about me)(?:\s*(?:&|and)\s*(?:highlights?|achievements?))?$/i,
+        },
         {
           key: "skills",
-          pattern: /\b(skills|competenc(?:y|ies))\b/i,
+          pattern:
+            /^(?:(?:technical|core|key)\s+)?(?:skills|competenc(?:y|ies)|technologies)$/i,
         },
         {
           key: "experience",
-          pattern: /\b(experience|employment history)\b/i,
+          pattern:
+            /^(?:(?:(?:professional|relevant)\s+)?(?:work|internship|intern)(?:\s*(?:\/|&|and)\s*(?:work|internship|intern))?\s+experience|experience|employment\s+history|internships?|industrial\s+training)(?:\s*(?:&|and)\s*(?:achievements?|responsibilities?))?$/i,
         },
         {
           key: "projects",
-          pattern: /\bprojects?\b/i,
+          pattern: /^(?:(?:selected|personal|academic|key)\s+)?projects?$/i,
         },
-        { key: "education", pattern: /\b(education|academic background)\b/i },
+        {
+          key: "education",
+          pattern:
+            /^(?:(?:academic|qualifications?)\s+)?background$|^education(?:\s*(?:&|and)\s+(?:qualifications?|details?))?$/i,
+        },
         {
           key: "certifications",
-          pattern: /\b(certifications?|certificates?|licenses?)\b/i,
+          pattern:
+            /^(?:professional\s+)?(?:certifications?|certificates?|licenses?)$/i,
         },
       ];
 
-      const BULLET_LINE_RE = /^\s*[•\-\*▪◦‣o]\s+/;
+      // Resume files commonly contain several bullet glyphs. The browser
+      // supplies the first marker through <li>; every source marker must be
+      // removed first or the print preview shows two dots on one line.
+      const BULLET_MARKER_CHARS = "•·●◦∙▪‣⁃‧‥⁌⁍_*-";
+      const BULLET_LINE_RE = new RegExp(
+        `^\\s*[${BULLET_MARKER_CHARS}](?=\\s|[${BULLET_MARKER_CHARS}])\\s*`,
+      );
+      const LEADING_BULLET_MARKERS_RE = new RegExp(
+        `^\\s*(?:[${BULLET_MARKER_CHARS}](?=\\s|[${BULLET_MARKER_CHARS}])\\s*)+`,
+      );
+
+      function stripLeadingBulletMarkers(line) {
+        return line.replace(LEADING_BULLET_MARKERS_RE, "").trim();
+      }
+
+      function normalizeBulletLine(line) {
+        return BULLET_LINE_RE.test(line)
+          ? `• ${stripLeadingBulletMarkers(line)}`
+          : line;
+      }
+
+      const DATE_TOKEN_SRC = "(?:(?:19|20)\\d{2}|'\\d{2}|\\d{1,2}\\/\\d{2,4})";
 
       // Broadened to also catch 2-digit years ('26) and slash dates
       // (03/2026, 03/26) — the original 4-digit-only pattern silently
@@ -1383,10 +1578,100 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
       // A bare, non-bulleted "|" line is a near-universal header convention
       // ("Company | Role", "Project | Type") and essentially never appears
       // in accomplishment prose, so it's a safe extra signal.
+      //
+      // NOTE: this is intentionally NOT built from DATE_TOKEN_SRC wrapped in
+      // one outer \b — the apostrophe-year alternative has no leading \b on
+      // purpose. "Mar '25": the space before "'" and the apostrophe itself
+      // are both non-word characters, so \b never fires at that position;
+      // wrapping the whole token in \b...\b would silently stop matching
+      // the exact 2-digit-year format this was broadened to support.
       const BLOCK_HEADER_SIGNAL_RE =
         /\b(19|20)\d{2}\b|'\d{2}\b|\b\d{1,2}\/\d{2,4}\b|\bongoing\b|\bpresent\b|\|/i;
       const DETAIL_LINE_PREFIX_RE = /^\s*(github|live|link|url)\s*:/i;
       const DANGLING_DASH_RE = /[-–—]\s*$/;
+
+      // Pulls a trailing date (range, "(Ongoing)", or a lone year) out of a
+      // header line so it can be right-aligned separately from the
+      // title/company text, instead of one long bold line that reads as a
+      // wall of text. Doesn't guess which pipe-segment is the company vs.
+      // the title (that varies by resume) — it only relocates the date and
+      // turns remaining "|" separators into ", " for a cleaner look.
+      const MONTH_SRC =
+        "(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?";
+      // A "date phrase" is a date token with an optional month name in
+      // front ("Mar 2026", not just "2026") — without this, a range like
+      // "Mar 2026 – Jun 2026" never matched at all, because the month name
+      // sits between the dash and the year on each side.
+      const DATE_PHRASE_SRC = "(?:" + MONTH_SRC + "\\s+)?" + DATE_TOKEN_SRC;
+      const HEADER_DATE_EXTRACT_RE = new RegExp(
+        "(" +
+          DATE_PHRASE_SRC +
+          "\\s*(?:–|—|-|to)\\s*(?:" +
+          DATE_PHRASE_SRC +
+          "|ongoing|present)" +
+          "|\\(\\s*(?:ongoing|present)\\s*\\)" +
+          "|" +
+          DATE_PHRASE_SRC +
+          "\\s*$" +
+          ")",
+        "i",
+      );
+
+      // Distinguishes real contact info (email/phone/URL) from a role
+      // tagline line under the name ("Java Full Stack Developer | Spring
+      // Boot & REST APIs") — the tagline is redundant with Summary/
+      // Experience and clutters the header, so it's left out of the
+      // flattened contact line. Never used to hide everything: if no line
+      // matches, the caller falls back to showing all of them.
+      function looksLikeContactLine(line) {
+        const hasEmail = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(
+          line,
+        );
+        const hasPhone = /(\+?\d[\d\-\s().]{7,}\d)/.test(line);
+        const hasUrlish =
+          /\b[a-z0-9-]+\.(com|io|dev|app|net|org|in|co)\b/i.test(line) ||
+          /https?:\/\//i.test(line);
+        const hasProfessionalProfile = /\b(?:linkedin|github)\b/i.test(line);
+        return hasEmail || hasPhone || hasUrlish || hasProfessionalProfile;
+      }
+
+      function splitHeaderForDisplay(headerLine) {
+        const trimmed = headerLine.trim();
+        const m = trimmed.match(HEADER_DATE_EXTRACT_RE);
+        if (!m) {
+          const title = trimmed
+            .split("|")
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .join(", ");
+          return { title, date: "" };
+        }
+        const before = trimmed.slice(0, m.index);
+        const after = trimmed.slice(m.index + m[0].length);
+        const dateText = m[0].replace(/^\(|\)$/g, "").trim();
+        const title = before
+          .split("|")
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .join(", ");
+        const tail = after.replace(/^[\s|]+|[\s|]+$/g, "").trim();
+        return { title, date: tail ? `${dateText} · ${tail}` : dateText };
+      }
+
+      function detectSectionKey(line) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.length > 80 || /[.!?]$/.test(trimmed))
+          return null;
+        const normalized = trimmed
+          .replace(/^[#*_\s]+|[#*_\s:]+$/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (!normalized || normalized.split(/\s+/).length > 8) return null;
+        const match = SECTION_PATTERNS.find((sp) =>
+          sp.pattern.test(normalized),
+        );
+        return match ? match.key : null;
+      }
 
       function parseResumeIntoSections(resumeText) {
         const lines = resumeText.split("\n");
@@ -1395,13 +1680,9 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
         sections.push(current);
 
         lines.forEach((line) => {
-          const trimmed = line.trim();
-          const matchedSection =
-            trimmed.length > 0 &&
-            trimmed.length < 40 &&
-            SECTION_PATTERNS.find((sp) => sp.pattern.test(trimmed));
-          if (matchedSection) {
-            current = { key: matchedSection.key, title: line, lines: [] };
+          const sectionKey = detectSectionKey(line);
+          if (sectionKey) {
+            current = { key: sectionKey, title: line, lines: [] };
             sections.push(current);
           } else {
             current.lines.push(line);
@@ -1439,8 +1720,14 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
             return;
           }
 
-          if (looksLikeHeader || current === null) {
+          if (looksLikeHeader) {
             current = { header: [line], bullets: [] };
+            blocks.push(current);
+          } else if (current === null) {
+            // A section may begin with a summary/prose line or a bullet. Do not
+            // promote that content to a fake job/project header just because it
+            // is the first non-empty line.
+            current = { header: [], bullets: [line] };
             blocks.push(current);
           } else {
             current.bullets.push(line);
@@ -1498,16 +1785,25 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
       }
 
       function narrowSkillLineToRelevantItems(line, keywords) {
-        if (!keywords || keywords.length === 0) return line;
         const { label, items } = splitSkillLineIntoItems(line);
-        if (items.length <= 1) return line;
-        const kept = items.filter(
-          (item) => scoreLineAgainstKeywords(item, keywords) > 0,
-        );
+        if (items.length <= 1) return line.replace(BULLET_LINE_RE, "").trim();
+        const kept =
+          keywords && keywords.length > 0
+            ? items.filter(
+                (item) => scoreLineAgainstKeywords(item, keywords) > 0,
+              )
+            : items;
         const finalItems = kept.length > 0 ? kept : items;
         return label
           ? `${label}: ${finalItems.join(", ")}`
           : finalItems.join(", ");
+      }
+
+      function formatSkillLineForOutput(line, keywords, jdOnly) {
+        const cleaned = line.replace(BULLET_LINE_RE, "").trim();
+        return jdOnly
+          ? narrowSkillLineToRelevantItems(cleaned, keywords)
+          : cleaned;
       }
 
       function reorderFlatLines(sectionLines, keywords) {
@@ -1633,9 +1929,13 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
             if (nonEmptyLines.length === 0) return;
             const [first, ...rest] = nonEmptyLines;
             html += `<div class="cv-name">${escapeHtml(first)}</div>`;
-            rest.forEach((line) => {
-              html += `<div class="cv-contact">${escapeHtml(line)}</div>`;
-            });
+            const contactLines = rest.filter((line) =>
+              looksLikeContactLine(line),
+            );
+            const linesToShow = contactLines.length > 0 ? contactLines : rest;
+            if (linesToShow.length > 0) {
+              html += `<div class="cv-contact">${escapeHtml(linesToShow.join(" · "))}</div>`;
+            }
             return;
           }
 
@@ -1647,17 +1947,16 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
             const relevantLines = jdOnly
               ? filterByRelevance(nonEmptyLines, keywords)
               : nonEmptyLines;
-            const displayLines = jdOnly
-              ? relevantLines.map((line) =>
-                  narrowSkillLineToRelevantItems(line, keywords),
-                )
-              : relevantLines;
-            html += `<ul class="cv-bullets">`;
-            displayLines.forEach((line) => {
-              const cleaned = line.replace(BULLET_LINE_RE, "").trim();
-              html += `<li>${highlightKeywords(cleaned, kwList)}</li>`;
+            relevantLines.forEach((line) => {
+              const formatted = formatSkillLineForOutput(
+                line,
+                keywords,
+                jdOnly,
+              );
+              if (formatted) {
+                html += `<p class="cv-skills-line">${highlightKeywords(formatted, kwList)}</p>`;
+              }
             });
-            html += `</ul>`;
           } else if (section.key === "summary") {
             const merged = nonEmptyLines.join(" ").replace(/\s+/g, " ").trim();
             if (merged) {
@@ -1670,7 +1969,8 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
                 .map((l) => l.trim())
                 .filter((l) => l.length > 0);
               headerLines.forEach((hl) => {
-                html += `<div class="cv-block-header">${highlightKeywords(hl, kwList)}</div>`;
+                const { title, date } = splitHeaderForDisplay(hl);
+                html += `<div class="cv-block-header-row"><span class="cv-block-title">${highlightKeywords(title, kwList)}</span>${date ? `<span class="cv-block-date">${escapeHtml(date)}</span>` : ""}</div>`;
               });
               const bulletsToShow = jdOnly
                 ? filterByRelevance(block.bullets, keywords)
@@ -1678,11 +1978,12 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
               if (bulletsToShow.length > 0) {
                 html += `<ul class="cv-bullets">`;
                 bulletsToShow.forEach((b) => {
-                  const cleaned = b.replace(BULLET_LINE_RE, "").trim();
+                  const cleaned = stripLeadingBulletMarkers(b);
                   if (cleaned.length > 0) {
                     html += `<li>${highlightKeywords(cleaned, kwList)}</li>`;
                   }
                 });
+
                 html += `</ul>`;
               }
             });
@@ -1691,6 +1992,7 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
           html += `</div>`;
         });
 
+        html += '<div class="print-brand">ATS Tracker Pro</div>';
         document.getElementById("resume-page").innerHTML = html;
       }
 
@@ -1716,7 +2018,8 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
           }
 
           if (!jdOnly || !FILTERABLE.has(section.key)) {
-            lines.push(...section.lines);
+            lines.push(...section.lines.map(normalizeBulletLine));
+
             return;
           }
 
@@ -1725,7 +2028,7 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
             const relevant = filterByRelevance(nonEmpty, keywords);
             lines.push(
               ...relevant.map((line) =>
-                narrowSkillLineToRelevantItems(line, keywords),
+                formatSkillLineForOutput(line, keywords, jdOnly),
               ),
             );
             return;
@@ -1734,7 +2037,11 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
           const blocks = splitIntoBlocks(section.lines);
           blocks.forEach((block) => {
             lines.push(...block.header);
-            lines.push(...filterByRelevance(block.bullets, keywords));
+            lines.push(
+              ...filterByRelevance(block.bullets, keywords).map(
+                normalizeBulletLine,
+              ),
+            );
           });
         });
 
@@ -1769,6 +2076,17 @@ Tip: use standard section headers like 'Experience', 'Projects', 'Skills', 'Educ
       }
 
       function printTailoredResume() {
+        const originalTitle = document.title;
+        const restoreTitle = () => {
+          document.title = originalTitle;
+          window.removeEventListener("afterprint", restoreTitle);
+        };
+        // Browser-generated date/URL headers are controlled by the print dialog,
+        // not page CSS. Clearing the document title prevents the app name from
+        // being repeated there; the dialog's "Headers and footers" option must
+        // be off to remove the remaining browser metadata completely.
+        document.title = "";
+        window.addEventListener("afterprint", restoreTitle);
         window.print();
       }
     </script>
