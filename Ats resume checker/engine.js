@@ -1,4 +1,3 @@
-
 /* Pure resume logic (no DOM). Browser: window.ATS. Node: require('./engine'). */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
