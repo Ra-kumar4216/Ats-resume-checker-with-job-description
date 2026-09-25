@@ -11,6 +11,36 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js" defer></script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+<aside class="hidden md:flex fixed inset-y-0 left-0 z-[60] w-14 sm:w-16 bg-slate-900 border-r border-slate-800 flex-col items-center py-5" aria-label="Dashboard navigation">
+  <nav class="flex flex-col items-center gap-3">
+    <button type="button" title="Dashboard" aria-label="Dashboard" class="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-slate-700/70 text-slate-100 flex items-center justify-center hover:bg-violet-600 transition-colors">
+      <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    </button>
+    <button type="button" title="Resume upload" aria-label="Resume upload" class="w-10 h-10 sm:w-11 sm:h-11 rounded-lg text-slate-400 flex items-center justify-center hover:bg-slate-800 hover:text-violet-300 transition-colors">
+      <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9.5Z"/><path d="M9 10h6v2H9z" fill="#0f172a"/></svg>
+    </button>
+    <button type="button" title="Job description" aria-label="Job description" class="w-10 h-10 sm:w-11 sm:h-11 rounded-lg text-slate-400 flex items-center justify-center hover:bg-slate-800 hover:text-violet-300 transition-colors">
+      <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2h-2V5h-4v2H8Zm-5 4h18v3h-7v-1h-4v1H3v-3Z"/></svg>
+    </button>
+    <button type="button" title="ATS analysis" aria-label="ATS analysis" class="w-10 h-10 sm:w-11 sm:h-11 rounded-lg text-slate-400 flex items-center justify-center hover:bg-slate-800 hover:text-violet-300 transition-colors">
+      <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true"><path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M14 3v5h5M8 12h8M8 15h8M8 18h5" stroke="#0f172a" stroke-width="1.5" fill="none"/></svg>
+    </button>
+    <button type="button" title="Tailored resume" aria-label="Tailored resume" class="w-10 h-10 sm:w-11 sm:h-11 rounded-lg text-slate-400 flex items-center justify-center hover:bg-slate-800 hover:text-violet-300 transition-colors">
+      <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true"><path d="M12 3 20 7v5c0 4.6-3.1 7.7-8 9-4.9-1.3-8-4.4-8-9V7l8-4Z"/><path d="m9 12 2 2 4-4" stroke="#0f172a" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </nav>
+  <div class="mt-auto flex flex-col items-center gap-3">
+    <button type="button" title="Settings" aria-label="Settings" class="w-10 h-10 sm:w-11 sm:h-11 rounded-lg text-slate-400 flex items-center justify-center hover:bg-slate-800 hover:text-violet-300 transition-colors">
+      <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true"><path d="m19.4 13.5 1.1.9-1.8 3.1-1.3-.5a7.7 7.7 0 0 1-1.8 1l-.2 1.4h-3.6l-.2-1.4a7.7 7.7 0 0 1-1.8-1l-1.3.5-1.8-3.1 1.1-.9a7 7 0 0 1 0-2.1l-1.1-.9 1.8-3.1 1.3.5a7.7 7.7 0 0 1 1.8-1l.2-1.4h3.6l.2 1.4a7.7 7.7 0 0 1 1.8 1l1.3-.5 1.8 3.1-1.1.9a7 7 0 0 1 0 2.1ZM13.6 15a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
+    </button>
+    <button type="button" title="Support" aria-label="Support" class="w-10 h-10 sm:w-11 sm:h-11 rounded-lg text-slate-400 flex items-center justify-center hover:bg-slate-800 hover:text-violet-300 transition-colors">
+      <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 13a8 8 0 0 1 16 0v4a2 2 0 0 1-2 2h-2v-5h4M4 14H2v3a2 2 0 0 0 2 2h2v-5"/><path d="M12 19v2h3"/></svg>
+    </button>
+    <button type="button" title="Help" aria-label="Help" class="w-10 h-10 sm:w-11 sm:h-11 rounded-lg text-slate-400 flex items-center justify-center hover:bg-slate-800 hover:text-violet-300 transition-colors">
+      <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.3 2.3 0 1 1 3.9 1.7c-1 .8-1.7 1.1-1.7 2.6M12 16.5h.01"/></svg>
+    </button>
+  </div>
+</aside>
 <header class="border-b border-slate-800 bg-slate-900/50 sticky top-0 z-50">
   <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
     <img src="assets/logo.svg.png" alt="ATS Tracker Pro logo" class="h-10 w-10 rounded-lg object-contain">
@@ -19,12 +49,13 @@
   </div>
 </header>
 <main class="max-w-6xl mx-auto px-4 py-8 w-full flex-grow">
-  <video class="w-full h-auto aspect-video rounded-xl border border-slate-800 shadow-lg object-contain md:aspect-auto md:h-[70vh]" autoplay muted loop playsinline preload="auto">
+  <section class="mb-8" aria-label="Dashboard introduction video">
+    <video class="w-full h-auto aspect-video rounded-xl border border-slate-800 shadow-lg object-contain md:aspect-auto md:h-[70vh]" autoplay muted loop playsinline preload="auto">
       <source src="assets/DESHboardats.mp4.mp4" type="video/mp4">
       Your browser does not support the video tag.
     </video>
   </section>
-  <p class="text-slate-300 text-sm max-w-2xl mb-6">Upload or paste your resume. Add a job description to score keyword match (optional ). Tailoring only reorders and filters lines already in your resume; nothing is invented.</p>
+  <p class="text-slate-300 text-sm max-w-2xl mb-6">Upload or paste your resume. Add a job description to score keyword match (optional). Tailoring only reorders and filters lines already in your resume; nothing is invented.</p>
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
     <div class="lg:col-span-7 space-y-6">
       <section class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
