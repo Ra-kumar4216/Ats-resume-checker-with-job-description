@@ -1,1 +1,2 @@
+{"id":"classic","name":"Classic ATS","description":"Black-and-white, single column, safest for strict parsers.","bestFor":"Any ATS, campus placements","style":{"font":"Calibri, Arial, sans-serif","accent":"#111111","basePx":11.5,"lineHeight":1.45,"headingTransform":"uppercase","headingRule":"1.5px solid #1a1a1a","nameAlign":"left","bullet":"disc"},"sectionOrder":["summary","skills","experience","projects","education","certifications"]}
 
