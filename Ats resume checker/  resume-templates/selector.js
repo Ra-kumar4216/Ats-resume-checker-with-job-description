@@ -1,28 +1,178 @@
-body{font-family:"Plus Jakarta Sans",system-ui,sans-serif}
-.field{width:100%;background:#020617;border:1px solid #334155;border-radius:8px;padding:12px;color:#e2e8f0;font-size:13px}
-.field:focus{outline:2px solid #8b5cf6;border-color:transparent}
-.tag-matched{background:rgba(16,185,129,.1);color:#34d399;border:1px solid rgba(16,185,129,.25)}
-.tag-missing{background:rgba(244,63,94,.08);color:#fb7185;border:1px solid rgba(244,63,94,.2)}
-#drop-zone:focus-within{outline:2px solid #a78bfa}
-#template-picker select{background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:4px 8px;margin-left:6px;max-width:260px}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* Resume template selector. Templates are embedded here (not fetched), so this
+   works even when index.html is opened directly by double-clicking it (file://)
+   and fetch() to templates/*.json would otherwise be blocked by the browser.
+   Browser: window.ResumeTemplates. Node: require('./selector'). */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.ResumeTemplates = factory();
+})(typeof self !== "undefined" ? self : this, function () {
+  const ORDER = [
+    "summary",
+    "skills",
+    "experience",
+    "projects",
+    "education",
+    "certifications",
+  ];
+  const TEMPLATES = [
+    {
+      id: "classic",
+      name: "Classic ATS",
+      description: "Black-and-white, single column, safest for strict parsers.",
+      bestFor: "Any ATS, campus placements",
+      style: {
+        font: "Calibri, Arial, sans-serif",
+        accent: "#111111",
+        basePx: 11.5,
+        lineHeight: 1.45,
+        headingTransform: "uppercase",
+        headingRule: "1.5px solid #1a1a1a",
+        nameAlign: "left",
+        bullet: "disc",
+      },
+      sectionOrder: ORDER,
+    },
+    {
+      id: "modern-blue",
+      name: "Modern Blue",
+      description: "Blue name and section rules; same parser-safe structure.",
+      bestFor: "Product and startup roles",
+      style: {
+        font: "Calibri, Arial, sans-serif",
+        accent: "#1d4ed8",
+        basePx: 11.5,
+        lineHeight: 1.45,
+        headingTransform: "uppercase",
+        headingRule: "1.5px solid #1d4ed8",
+        nameAlign: "left",
+        bullet: "disc",
+      },
+      sectionOrder: ORDER,
+    },
+    {
+      id: "fresher-projects-first",
+      name: "Fresher: Projects First",
+      description: "Education and projects lead; experience follows.",
+      bestFor: "Freshers with projects stronger than work history",
+      style: {
+        font: "Calibri, Arial, sans-serif",
+        accent: "#1d4ed8",
+        basePx: 11.5,
+        lineHeight: 1.45,
+        headingTransform: "uppercase",
+        headingRule: "1.5px solid #1a1a1a",
+        nameAlign: "left",
+        bullet: "disc",
+      },
+      sectionOrder: [
+        "summary",
+        "education",
+        "skills",
+        "projects",
+        "experience",
+        "certifications",
+      ],
+    },
+    {
+      id: "compact-one-page",
+      name: "Compact One-Page",
+      description: "Tighter type and spacing to fit one A4 page.",
+      bestFor: "Content-heavy resumes that spill to page 2",
+      style: {
+        font: "Arial, Helvetica, sans-serif",
+        accent: "#111111",
+        basePx: 10.5,
+        lineHeight: 1.3,
+        headingTransform: "uppercase",
+        headingRule: "1px solid #1a1a1a",
+        nameAlign: "left",
+        bullet: "disc",
+      },
+      sectionOrder: ORDER,
+    },
+    {
+      id: "minimal-serif",
+      name: "Minimal Serif",
+      description: "Centered name, serif body, no heading rules.",
+      bestFor: "Academic and conservative employers",
+      style: {
+        font: "Georgia, 'Times New Roman', serif",
+        accent: "#222222",
+        basePx: 11.5,
+        lineHeight: 1.5,
+        headingTransform: "capitalize",
+        headingRule: "0 none transparent",
+        nameAlign: "center",
+        bullet: "circle",
+      },
+      sectionOrder: ORDER,
+    },
+  ];
+  const IDS = TEMPLATES.map((t) => t.id);
 
-/* Resume preview. Template variables come from resume-templates/selector.js */
-#resume-page{background:#fff;color:#1a1a1a;font-family:var(--cv-font,Calibri,Arial,sans-serif);line-height:var(--cv-line-height,1.45);max-width:700px;margin:0 auto;padding:36px 40px;border-radius:6px}
-#resume-page .cv-name{font-size:24px;font-weight:700;color:var(--cv-accent,#1d4ed8);text-align:var(--cv-name-align,left);margin-bottom:3px}
-#resume-page .cv-contact{font-size:11px;color:#555;text-align:var(--cv-name-align,left);margin-bottom:14px}
-#resume-page .cv-section{margin-top:14px}
-#resume-page .cv-section-title{font-size:12.5px;font-weight:700;letter-spacing:.7px;text-transform:var(--cv-heading-transform,uppercase);border-bottom:var(--cv-heading-rule,1.5px solid #1a1a1a);padding-bottom:2px;margin-bottom:6px}
-#resume-page .cv-block-header-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:8px}
-#resume-page .cv-block-title{font-size:12.5px;font-weight:700}
-#resume-page .cv-block-date{font-size:11px;font-style:italic;color:#555;white-space:nowrap}
-#resume-page ul.cv-bullets{margin:2px 0 4px;padding-left:18px;list-style-type:var(--cv-bullet,disc)}
-#resume-page li,#resume-page p{font-size:var(--cv-base-px,11.5px);margin:2px 0}
-mark.kw-hit{background:#fef08a;color:#1a1a1a;padding:0 1px;border-radius:2px}
-@media print{
-  @page{size:A4;margin:0}
-  html,body{background:#fff!important}
-  body>header,body>footer,main>*:not(#tailored-section),#tailored-section>*:not(#resume-page){display:none!important}
-  #resume-page{max-width:none;border-radius:0;padding:10mm 12mm}
-  mark.kw-hit{background:none;padding:0}
-}
+  // Kept async for API compatibility (and in case someone swaps this for a real
+  // fetch later); resolves instantly since the data is already in memory.
+  async function loadTemplates() {
+    return TEMPLATES.map((t) => JSON.parse(JSON.stringify(t)));
+  }
+
+  function getTemplate(list, id) {
+    return list.find((t) => t.id === id) || list[0];
+  }
+
+  // Header stays first; known sections follow template order; unknown keys keep their original order at the end.
+  function orderSections(sections, tpl) {
+    const rank = (k) =>
+      k === "header"
+        ? -1
+        : tpl.sectionOrder.includes(k)
+          ? tpl.sectionOrder.indexOf(k)
+          : 99;
+    return sections
+      .map((s, i) => ({ s, i }))
+      .sort((a, b) => rank(a.s.key) - rank(b.s.key) || a.i - b.i)
+      .map((x) => x.s);
+  }
+
+  function applyTemplate(el, tpl) {
+    const st = tpl.style,
+      set = (k, v) => el.style.setProperty(k, v);
+    set("--cv-font", st.font);
+    set("--cv-accent", st.accent);
+    set("--cv-base-px", st.basePx + "px");
+    set("--cv-line-height", st.lineHeight);
+    set("--cv-heading-transform", st.headingTransform);
+    set("--cv-heading-rule", st.headingRule);
+    set("--cv-name-align", st.nameAlign);
+    set("--cv-bullet", st.bullet);
+    el.dataset.template = tpl.id;
+  }
+
+  function mountSelector(container, list, onChange) {
+    container.innerHTML = "";
+    const label = document.createElement("label");
+    label.htmlFor = "template-select";
+    label.textContent = "Resume template ";
+    const select = document.createElement("select");
+    select.id = "template-select";
+    list.forEach((t) =>
+      select.add(new Option(`${t.name} — ${t.bestFor}`, t.id)),
+    );
+    select.addEventListener("change", () =>
+      onChange(getTemplate(list, select.value)),
+    );
+    label.appendChild(select);
+    container.appendChild(label);
+    return select;
+  }
+
+  return {
+    IDS,
+    TEMPLATES,
+    loadTemplates,
+    getTemplate,
+    orderSections,
+    applyTemplate,
+    mountSelector,
+  };
+});
