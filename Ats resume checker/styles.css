@@ -28,6 +28,9 @@ mark.kw-hit{background:#fef08a;color:#1a1a1a;padding:0 1px;border-radius:2px}
   body>*{display:none!important}
   body>#resume-page-scale{display:block!important;overflow:visible!important;height:auto!important}
   #resume-page{max-width:none!important;width:auto!important;transform:none!important;margin:0!important;border-radius:0;padding:10mm 12mm}
+  #resume-page .cv-section{break-inside:avoid;page-break-inside:avoid}
+  #resume-page .cv-block-header-row{break-inside:avoid;page-break-inside:avoid}
+  #resume-page .cv-section-title{break-after:avoid;page-break-after:avoid}
   mark.kw-hit{background:none;padding:0}
 }
 
