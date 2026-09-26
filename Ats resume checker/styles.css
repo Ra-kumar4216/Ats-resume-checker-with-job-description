@@ -24,7 +24,8 @@ body{font-family:"Plus Jakarta Sans",system-ui,sans-serif}
 mark.kw-hit{background:#fef08a;color:#1a1a1a;padding:0 1px;border-radius:2px}
 @media print{
   @page{size:A4;margin:0}
-  html,body{background:#fff!important}
+  html,body{background:#fff!important;margin:0!important;width:210mm!important}
+  body{position:relative!important}
   body *{visibility:hidden!important}
   #resume-page,#resume-page *{visibility:visible!important}
   #resume-page-scale{overflow:visible!important;height:auto!important}
