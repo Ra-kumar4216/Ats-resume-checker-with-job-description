@@ -141,20 +141,40 @@
     const a = document.createElement('a'); a.href = url; a.download = 'tailored-resume.txt'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
+  // ---- print ----
+  // For printing, the resume is temporarily moved to be a direct child of <body>. This
+  // keeps it in NORMAL document flow, so a multi-page resume paginates the same way any
+  // ordinary page does. (It was previously kept in place and pulled out with
+  // position:absolute, which does not fragment across printed pages reliably — that's
+  // what caused page 2 to render the top of the resume compressed/overlapping.)
+  // Hooked on beforeprint/afterprint (not just the button) so it also works if printing
+  // is started from the browser's own menu.
+  let printMarker = null, printVpOriginal = null;
+  function preparePrint() {
+    const scaleWrap = $('resume-page-scale');
+    if (!scaleWrap || scaleWrap.parentElement === document.body) return; // already prepared
+    printMarker = document.createComment('resume-page-scale-anchor');
+    scaleWrap.before(printMarker);
+    document.body.appendChild(scaleWrap);
+    const vp = document.querySelector('meta[name="viewport"]');
+    if (vp) { printVpOriginal = vp.getAttribute('content'); vp.setAttribute('content', 'width=1000'); } // A4-ish width, not the phone's narrow screen width
+  }
+  function restoreAfterPrint() {
+    const scaleWrap = $('resume-page-scale');
+    if (printMarker && scaleWrap) { printMarker.replaceWith(scaleWrap); printMarker = null; }
+    const vp = document.querySelector('meta[name="viewport"]');
+    if (vp && printVpOriginal !== null) { vp.setAttribute('content', printVpOriginal); printVpOriginal = null; }
+    fitResumeToScreen(); // recompute the on-screen mobile "fit to screen" scaling
+  }
+  window.addEventListener('beforeprint', preparePrint);
+  window.addEventListener('afterprint', restoreAfterPrint);
+
   $('print-btn').addEventListener('click', () => {
     const t = document.title; document.title = '';
-    const vp = document.querySelector('meta[name="viewport"]');
-    const vpOriginal = vp && vp.getAttribute('content');
-    let restored = false;
-    const restore = () => {
-      if (restored) return; restored = true;
-      document.title = t;
-      if (vp && vpOriginal !== null) vp.setAttribute('content', vpOriginal);
-      fitResumeToScreen(); // undo the temporary wide-viewport reflow for the on-screen view
-    };
-    window.addEventListener('afterprint', restore, { once: true });
-    setTimeout(restore, 2000); // fallback: some mobile browsers never fire afterprint
-    if (vp) vp.setAttribute('content', 'width=1000'); // A4-ish CSS width, so print isn't laid out at phone-screen width
+    const restoreTitle = () => (document.title = t);
+    window.addEventListener('afterprint', restoreTitle, { once: true });
+    setTimeout(restoreTitle, 2500); // fallback: some mobile browsers never fire afterprint
+    preparePrint(); // run now too, in case this browser fires beforeprint too late
     requestAnimationFrame(() => requestAnimationFrame(window.print));
   });
 
