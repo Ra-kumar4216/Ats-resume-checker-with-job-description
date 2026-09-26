@@ -143,8 +143,19 @@
   });
   $('print-btn').addEventListener('click', () => {
     const t = document.title; document.title = '';
-    window.addEventListener('afterprint', () => (document.title = t), { once: true });
-    window.print();
+    const vp = document.querySelector('meta[name="viewport"]');
+    const vpOriginal = vp && vp.getAttribute('content');
+    let restored = false;
+    const restore = () => {
+      if (restored) return; restored = true;
+      document.title = t;
+      if (vp && vpOriginal !== null) vp.setAttribute('content', vpOriginal);
+      fitResumeToScreen(); // undo the temporary wide-viewport reflow for the on-screen view
+    };
+    window.addEventListener('afterprint', restore, { once: true });
+    setTimeout(restore, 2000); // fallback: some mobile browsers never fire afterprint
+    if (vp) vp.setAttribute('content', 'width=1000'); // A4-ish CSS width, so print isn't laid out at phone-screen width
+    requestAnimationFrame(() => requestAnimationFrame(window.print));
   });
 
   // ---- templates (needs http://, fetch() does not work from file://) ----
