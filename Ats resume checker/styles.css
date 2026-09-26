@@ -8,6 +8,9 @@ body{font-family:"Plus Jakarta Sans",system-ui,sans-serif}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 /* Resume preview. Template variables come from resume-templates/selector.js */
+/* #resume-page-scale wraps #resume-page and is used by app.js to shrink the whole
+   page down to fit narrow/phone screens without reflowing the resume's own layout. */
+#resume-page-scale{overflow:hidden}
 #resume-page{background:#fff;color:#1a1a1a;font-family:var(--cv-font,Calibri,Arial,sans-serif);line-height:var(--cv-line-height,1.45);max-width:700px;margin:0 auto;padding:36px 40px;border-radius:6px}
 #resume-page .cv-name{font-size:24px;font-weight:700;color:var(--cv-accent,#1d4ed8);text-align:var(--cv-name-align,left);margin-bottom:3px}
 #resume-page .cv-contact{font-size:11px;color:#555;text-align:var(--cv-name-align,left);margin-bottom:14px}
@@ -24,7 +27,8 @@ mark.kw-hit{background:#fef08a;color:#1a1a1a;padding:0 1px;border-radius:2px}
   html,body{background:#fff!important}
   body *{visibility:hidden!important}
   #resume-page,#resume-page *{visibility:visible!important}
-  #resume-page{position:absolute;top:0;left:0;right:0;max-width:none;width:auto;margin:0;border-radius:0;padding:10mm 12mm}
+  #resume-page-scale{overflow:visible!important;height:auto!important}
+  #resume-page{position:absolute;top:0;left:0;right:0;max-width:none;width:auto!important;transform:none!important;margin:0;border-radius:0;padding:10mm 12mm}
   mark.kw-hit{background:none;padding:0}
 }
 
