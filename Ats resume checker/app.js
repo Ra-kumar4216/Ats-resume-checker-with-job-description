@@ -86,10 +86,33 @@
   // ---- tailor + preview ----
   const opts = () => ({ highlight: $('highlight-toggle').checked, jdOnly: $('jd-only-toggle').checked });
   const applyOrder = () => { if (tailored && template) tailored.sections = ResumeTemplates.orderSections(tailored.sections, template); };
+
+  // ---- mobile preview: shrink the whole resume page to fit narrow screens ----
+  // The resume keeps its real desktop layout (fixed DESIGN_WIDTH, no text reflow) and is
+  // visually scaled down with a CSS transform, like a zoomed-out full-page thumbnail.
+  const DESIGN_WIDTH = 700; // matches #resume-page's max-width in styles.css
+  function fitResumeToScreen() {
+    const scaleWrap = $('resume-page-scale'), page = $('resume-page');
+    if (!tailored || !scaleWrap) return;
+    page.style.transform = 'none';
+    page.style.width = '';
+    const available = scaleWrap.clientWidth;
+    if (!available) return; // section not visible yet (e.g. still hidden pre-tailor)
+    if (available >= DESIGN_WIDTH) { scaleWrap.style.height = ''; return; } // fits at full size
+    const scale = available / DESIGN_WIDTH;
+    page.style.width = DESIGN_WIDTH + 'px';
+    const naturalHeight = page.offsetHeight;
+    page.style.transformOrigin = 'top left';
+    page.style.transform = `scale(${scale})`;
+    scaleWrap.style.height = (naturalHeight * scale) + 'px';
+  }
+  window.addEventListener('resize', () => requestAnimationFrame(fitResumeToScreen));
+
   function render() {
     if (!tailored) return;
     $('resume-page').innerHTML = ATS.renderHTML(tailored.sections, tailored.keywords, opts());
     $('tailored-output').value = ATS.renderText(tailored.sections, tailored.keywords, opts());
+    fitResumeToScreen();
   }
   function onTailor() {
     const resume = $('resume-text').value.trim();
@@ -98,6 +121,7 @@
     tailored = ATS.tailor(resume, $('jd-text').value.trim());
     applyOrder(); render();
     $('tailored-section').classList.remove('hidden');
+    requestAnimationFrame(fitResumeToScreen); // section just became visible; refit now it has real width
     $('tailored-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
