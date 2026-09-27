@@ -1,6 +1,14 @@
-/* Resume template selector. Templates are embedded here (not fetched), so this
-   works even when index.html is opened directly by double-clicking it (file://)
-   and fetch() to templates/*.json would otherwise be blocked by the browser.
+/* Resume template selector. Template DATA lives entirely in the JSON files under
+   resume-templates/templates/ — this file only lists their filenames and loads them
+   with fetch(). To add or edit a template, add/edit a JSON file; no JS changes needed.
+
+   fetch() of local files is blocked by the browser when index.html is opened directly
+   via file:// (double-click). That's fine when deployed (Vercel serves over http/https),
+   but for local testing run a tiny static server instead, e.g.:
+     npx serve "Ats resume checker"
+   If fetch is unavailable or a JSON file fails to load, we fall back to one built-in
+   template so the app still works — just with fewer choices until you run it over http.
+
    Browser: window.ResumeTemplates. Node: require('./selector'). */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
@@ -14,106 +22,100 @@
     "education",
     "certifications",
   ];
-  const TEMPLATES = [
-    {
-      id: "classic",
-      name: "Classic ATS",
-      description: "Black-and-white, single column, safest for strict parsers.",
-      bestFor: "Any ATS, campus placements",
-      style: {
-        font: "Calibri, Arial, sans-serif",
-        accent: "#111111",
-        basePx: 11.5,
-        lineHeight: 1.45,
-        headingTransform: "uppercase",
-        headingRule: "1.5px solid #1a1a1a",
-        nameAlign: "left",
-        bullet: "disc",
-      },
-      sectionOrder: ORDER,
-    },
-    {
-      id: "modern-blue",
-      name: "Modern Blue",
-      description: "Blue name and section rules; same parser-safe structure.",
-      bestFor: "Product and startup roles",
-      style: {
-        font: "Calibri, Arial, sans-serif",
-        accent: "#1d4ed8",
-        basePx: 11.5,
-        lineHeight: 1.45,
-        headingTransform: "uppercase",
-        headingRule: "1.5px solid #1d4ed8",
-        nameAlign: "left",
-        bullet: "disc",
-      },
-      sectionOrder: ORDER,
-    },
-    {
-      id: "fresher-projects-first",
-      name: "Fresher: Projects First",
-      description: "Education and projects lead; experience follows.",
-      bestFor: "Freshers with projects stronger than work history",
-      style: {
-        font: "Calibri, Arial, sans-serif",
-        accent: "#1d4ed8",
-        basePx: 11.5,
-        lineHeight: 1.45,
-        headingTransform: "uppercase",
-        headingRule: "1.5px solid #1a1a1a",
-        nameAlign: "left",
-        bullet: "disc",
-      },
-      sectionOrder: [
-        "summary",
-        "education",
-        "skills",
-        "projects",
-        "experience",
-        "certifications",
-      ],
-    },
-    {
-      id: "compact-one-page",
-      name: "Compact One-Page",
-      description: "Tighter type and spacing to fit one A4 page.",
-      bestFor: "Content-heavy resumes that spill to page 2",
-      style: {
-        font: "Arial, Helvetica, sans-serif",
-        accent: "#111111",
-        basePx: 10.5,
-        lineHeight: 1.3,
-        headingTransform: "uppercase",
-        headingRule: "1px solid #1a1a1a",
-        nameAlign: "left",
-        bullet: "disc",
-      },
-      sectionOrder: ORDER,
-    },
-    {
-      id: "minimal-serif",
-      name: "Minimal Serif",
-      description: "Centered name, serif body, no heading rules.",
-      bestFor: "Academic and conservative employers",
-      style: {
-        font: "Georgia, 'Times New Roman', serif",
-        accent: "#222222",
-        basePx: 11.5,
-        lineHeight: 1.5,
-        headingTransform: "capitalize",
-        headingRule: "0 none transparent",
-        nameAlign: "center",
-        bullet: "circle",
-      },
-      sectionOrder: ORDER,
-    },
-  ];
-  const IDS = TEMPLATES.map((t) => t.id);
 
-  // Kept async for API compatibility (and in case someone swaps this for a real
-  // fetch later); resolves instantly since the data is already in memory.
+  // Filenames only — add a new template by dropping a JSON file in
+  // resume-templates/templates/ and listing it here.
+  const MANIFEST = [
+    "classic.json",
+    "modern-blue.json",
+    "fresher-projects-first.json",
+    "compact-one-page.json",
+    "minimal-serif.json",
+  ];
+
+  const STYLE_KEYS = [
+    "font", "accent", "basePx", "lineHeight",
+    "headingTransform", "headingRule", "nameAlign", "bullet",
+  ];
+
+  // Used only if fetching the JSON files fails entirely (e.g. opened via file://).
+  const FALLBACK_TEMPLATE = {
+    id: "classic",
+    name: "Classic ATS",
+    description: "Black-and-white, single column, safest for strict parsers.",
+    bestFor: "Any ATS, campus placements",
+    style: {
+      font: "Calibri, Arial, sans-serif",
+      accent: "#111111",
+      basePx: 11.5,
+      lineHeight: 1.45,
+      headingTransform: "uppercase",
+      headingRule: "1.5px solid #1a1a1a",
+      nameAlign: "left",
+      bullet: "disc",
+    },
+    sectionOrder: ORDER,
+  };
+
+  // Resolve template JSON paths relative to THIS script's own location (not the page),
+  // so the app keeps working even if resume-templates/ is ever moved or referenced from
+  // a different page.
+  function baseUrl() {
+    const scripts = document.getElementsByTagName("script");
+    for (let i = scripts.length - 1; i >= 0; i--) {
+      const src = scripts[i].src;
+      if (src && /resume-templates\/selector\.js(?:[?#]|$)/.test(src)) {
+        return src.replace(/selector\.js.*$/, "templates/");
+      }
+    }
+    return "resume-templates/templates/"; // fallback if src can't be resolved
+  }
+
+  function isValidTemplate(data) {
+    return (
+      data &&
+      typeof data.id === "string" && data.id &&
+      typeof data.name === "string" && data.name &&
+      data.style && typeof data.style === "object" &&
+      STYLE_KEYS.every((k) => k in data.style)
+    );
+  }
+
+  async function fetchTemplate(url, filename) {
+    const res = await fetch(url, { cache: "no-cache" });
+    if (!res.ok) throw new Error(`${filename}: HTTP ${res.status}`);
+    const data = await res.json();
+    if (!isValidTemplate(data)) throw new Error(`${filename}: missing required fields`);
+    if (!Array.isArray(data.sectionOrder) || !data.sectionOrder.length) {
+      data.sectionOrder = ORDER;
+    }
+    return data;
+  }
+
   async function loadTemplates() {
-    return TEMPLATES.map((t) => JSON.parse(JSON.stringify(t)));
+    const base = baseUrl();
+
+    const settled = await Promise.allSettled(
+      MANIFEST.map((filename) => fetchTemplate(base + filename, filename)),
+    );
+
+    const templates = [];
+    settled.forEach((result, i) => {
+      if (result.status === "fulfilled") {
+        templates.push(result.value);
+      } else {
+        console.warn(`Skipping template "${MANIFEST[i]}":`, result.reason);
+      }
+    });
+
+    if (!templates.length) {
+      console.warn(
+        "Could not load any template JSON files (opened via file://? try a local server). Using built-in fallback template.",
+      );
+      return [FALLBACK_TEMPLATE];
+    }
+
+    return templates;
   }
 
   function getTemplate(list, id) {
@@ -156,7 +158,7 @@
     const select = document.createElement("select");
     select.id = "template-select";
     list.forEach((t) =>
-      select.add(new Option(`${t.name} — ${t.bestFor}`, t.id)),
+      select.add(new Option(`${t.name} — ${t.bestFor || ""}`, t.id)),
     );
     select.addEventListener("change", () =>
       onChange(getTemplate(list, select.value)),
@@ -167,8 +169,7 @@
   }
 
   return {
-    IDS,
-    TEMPLATES,
+    MANIFEST,
     loadTemplates,
     getTemplate,
     orderSections,
