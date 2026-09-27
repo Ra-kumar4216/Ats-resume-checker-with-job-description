@@ -11,6 +11,11 @@
   const showError = (m) => { $('form-error').textContent = m; $('form-error').classList.remove('hidden'); };
   const hideError = () => $('form-error').classList.add('hidden');
 
+  // ---- "coming soon" nav placeholders: href="#" would otherwise jump/scroll the page ----
+  document.querySelectorAll('[title="Coming soon"]').forEach((el) => {
+    el.addEventListener('click', (e) => e.preventDefault());
+  });
+
   // ---- upload ----
   const input = $('file-input');
   ['dragover', 'drop'].forEach((e) => window.addEventListener(e, (ev) => ev.preventDefault()));
