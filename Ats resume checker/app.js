@@ -149,19 +149,28 @@
   // what caused page 2 to render the top of the resume compressed/overlapping.)
   // Hooked on beforeprint/afterprint (not just the button) so it also works if printing
   // is started from the browser's own menu.
-  let printMarker = null, printVpOriginal = null;
+  let printMarker = null, printVpOriginal = null, printExtras = null;
   function preparePrint() {
     const scaleWrap = $('resume-page-scale');
     if (!scaleWrap || scaleWrap.parentElement === document.body) return; // already prepared
     printMarker = document.createComment('resume-page-scale-anchor');
     scaleWrap.before(printMarker);
     document.body.appendChild(scaleWrap);
+    // Some browser extensions / third-party embeds attach their own floating UI as a
+    // sibling of <body> (a direct child of <html>), specifically to dodge the page's own
+    // CSS and JS. Hiding body's children doesn't reach those, so remove them outright;
+    // this is what was bleeding a floating widget icon into the printed PDF.
+    printExtras = [...document.documentElement.children]
+      .filter((el) => el !== document.head && el !== document.body)
+      .map((el) => [el, el.nextSibling]);
+    printExtras.forEach(([el]) => el.remove());
     const vp = document.querySelector('meta[name="viewport"]');
     if (vp) { printVpOriginal = vp.getAttribute('content'); vp.setAttribute('content', 'width=1000'); } // A4-ish width, not the phone's narrow screen width
   }
   function restoreAfterPrint() {
     const scaleWrap = $('resume-page-scale');
     if (printMarker && scaleWrap) { printMarker.replaceWith(scaleWrap); printMarker = null; }
+    if (printExtras) { printExtras.forEach(([el, next]) => document.documentElement.insertBefore(el, next)); printExtras = null; }
     const vp = document.querySelector('meta[name="viewport"]');
     if (vp && printVpOriginal !== null) { vp.setAttribute('content', printVpOriginal); printVpOriginal = null; }
     fitResumeToScreen(); // recompute the on-screen mobile "fit to screen" scaling
