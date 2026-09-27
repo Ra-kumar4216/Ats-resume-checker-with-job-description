@@ -25,9 +25,10 @@ mark.kw-hit{background:#fef08a;color:#1a1a1a;padding:0 1px;border-radius:2px}
 @media print{
   @page{size:A4;margin:0}
   html,body{background:#fff!important;margin:0!important}
+  html>*:not(body){display:none!important}
   body>*{display:none!important}
   body>#resume-page-scale{display:block!important;overflow:visible!important;height:auto!important}
-  #resume-page{max-width:none!important;width:auto!important;transform:none!important;margin:0!important;border-radius:0;padding:10mm 12mm}
+  #resume-page{max-width:none!important;width:auto!important;transform:none!important;margin:0!important;border-radius:0;padding:10mm 12mm!important;-webkit-box-decoration-break:clone;box-decoration-break:clone}
   #resume-page .cv-section{break-inside:avoid;page-break-inside:avoid}
   #resume-page .cv-block-header-row{break-inside:avoid;page-break-inside:avoid}
   #resume-page .cv-section-title{break-after:avoid;page-break-after:avoid}
