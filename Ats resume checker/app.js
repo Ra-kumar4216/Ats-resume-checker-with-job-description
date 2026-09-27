@@ -2,6 +2,11 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   let tailored = null, template = null;
+  const MAX_FILE_BYTES = 5 * 1024 * 1024;
+  const MAX_PDF_PAGES = 15;
+  const MAX_EXTRACTED_CHARS = 120000;
+  const MIN_RESUME_WORDS = 10;
+  const MIN_JD_WORDS = 8;
 
   const words = (s) => s.trim().split(/\s+/).filter(Boolean).length;
   [['resume-text', 'resume-count'], ['jd-text', 'jd-count']].forEach(([i, o]) => {
@@ -22,15 +27,36 @@
   $('drop-zone').addEventListener('drop', (e) => e.dataTransfer.files[0] && handleFile(e.dataTransfer.files[0]));
   input.addEventListener('change', () => input.files[0] && handleFile(input.files[0]));
 
+  const wordCount = (s) => String(s || '').trim().split(/\s+/).filter(Boolean).length;
+  const validateResume = () => {
+    const value = $('resume-text').value.trim();
+    if (!value) return 'Upload or paste your resume first.';
+    if (wordCount(value) < MIN_RESUME_WORDS) return `Please add a little more resume content (at least ${MIN_RESUME_WORDS} words).`;
+    if (value.length > MAX_EXTRACTED_CHARS) return 'Resume text is too long to process safely. Please keep it under 120,000 characters.';
+    return '';
+  };
+  const validateJobDescription = () => {
+    const value = $('jd-text').value.trim();
+    if (!value) return 'Please add the job description before continuing.';
+    if (wordCount(value) < MIN_JD_WORDS) return `Please add a fuller job description (at least ${MIN_JD_WORDS} words).`;
+    if (value.length > MAX_EXTRACTED_CHARS) return 'Job description is too long to process safely. Please keep it under 120,000 characters.';
+    return '';
+  };
+  window.ATSApp = { validateResume, validateJobDescription, showError, hideError };
+
   async function handleFile(file) {
+    if (!file) return;
     const ext = file.name.split('.').pop().toLowerCase();
-    if (file.size > 5 * 1024 * 1024) return fail('File is too large (max 5MB).');
+    if (file.size > MAX_FILE_BYTES) return fail('File is too large (maximum 5MB).');
     if (!['pdf', 'docx', 'txt'].includes(ext)) return fail('Unsupported type. Use PDF, DOCX or TXT.');
     $('upload-status').textContent = 'Extracting text…'; hideError();
     try {
       const buf = ext === 'txt' ? null : await file.arrayBuffer();
       const text = ext === 'txt' ? await file.text() : ext === 'pdf' ? await readPdf(buf) : await readDocx(buf);
-      $('resume-text').value = text.trim(); $('resume-text').dispatchEvent(new Event('input'));
+      const safeText = String(text || '').trim();
+      if (!safeText) throw new Error('No extractable text');
+      if (safeText.length > MAX_EXTRACTED_CHARS) throw new Error('Extracted text is too large');
+      $('resume-text').value = safeText; $('resume-text').dispatchEvent(new Event('input'));
       $('upload-status').textContent = 'Loaded: ' + file.name;
     } catch (err) {
       console.error(err);
@@ -41,14 +67,16 @@
 
   async function readPdf(buf) {
     if (!window.pdfjsLib) throw new Error('PDF engine not loaded');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.js';
     const pdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise; // CVE-2024-4367 mitigation
+    if (pdf.numPages > MAX_PDF_PAGES) { pdf.destroy(); throw new Error('Too many PDF pages'); }
     let text = '';
     for (let i = 1; i <= pdf.numPages; i++) {
       const content = await (await pdf.getPage(i)).getTextContent();
       let lastY = null;
       content.items.forEach((it) => { const y = it.transform[5]; if (lastY !== null) text += Math.abs(y - lastY) > 2 ? '\n' : ' '; text += it.str; lastY = y; });
       text += '\n';
+      if (text.length > MAX_EXTRACTED_CHARS) { pdf.destroy(); throw new Error('Extracted text is too large'); }
     }
     pdf.destroy();
     if (!text.trim()) throw new Error('No extractable text');
@@ -58,9 +86,11 @@
     if (!window.mammoth) throw new Error('DOCX engine not loaded');
     const { value } = await mammoth.convertToHtml({ arrayBuffer: buf });
     const body = new DOMParser().parseFromString(value, 'text/html').body; // inert parse, no innerHTML on live DOM
-    return [...body.children].flatMap((el) => /^(UL|OL)$/.test(el.tagName)
+    const text = [...body.children].flatMap((el) => /^(UL|OL)$/.test(el.tagName)
       ? [...el.querySelectorAll(':scope > li')].map((li) => '• ' + li.textContent.trim())
       : [el.textContent.trim()]).filter(Boolean).join('\n');
+    if (text.length > MAX_EXTRACTED_CHARS) throw new Error('Extracted text is too large');
+    return text;
   }
 
   // ---- analyze ----
@@ -71,7 +101,12 @@
   }
   function onAnalyze() {
     const resume = $('resume-text').value.trim(), jd = $('jd-text').value.trim();
-    if (!resume) return showError('Upload or paste your resume first.');
+    const resumeError = validateResume();
+    if (resumeError) return showError(resumeError);
+    if (jd) {
+      const jdError = validateJobDescription();
+      if (jdError) return showError(jdError);
+    }
     hideError();
     const r = ATS.analyze(resume, jd), s = r.score;
     const [color, status] = s >= 80 ? ['#10b981', 'Strong resume'] : s >= 60 ? ['#8b5cf6', 'Good, room to improve'] : s >= 40 ? ['#f59e0b', 'Weak, needs work'] : ['#f43f5e', 'Needs significant work'];
@@ -79,13 +114,16 @@
     const c = $('score-circle'); c.style.strokeDashoffset = 377 - (377 * s) / 100; c.setAttribute('stroke', color);
     $('score-text').textContent = s + '%'; $('score-status').textContent = status; $('score-status').style.color = color;
     const jdMode = r.mode === 'jd';
-    $('mode-badge').textContent = jdMode ? 'JD keyword match' : 'General ATS score (no JD)';
+    $('mode-badge').textContent = jdMode ? 'JD keyword match estimate' : 'General resume-quality estimate';
     $('matched-label').textContent = jdMode ? 'Matched keywords' : 'Skills detected';
     $('missing-label').textContent = jdMode ? 'Missing keywords' : 'Suggestions';
     $('matched-count').textContent = r.matched.length; $('missing-count').textContent = r.missing.length;
     tags($('matched-tags'), r.matched, 'tag-matched capitalize', 'None found');
     tags($('missing-tags'), r.missing, 'tag-missing', r.noKeywords ? 'No usable keywords found in this JD; no keyword points awarded.' : 'Nothing missing');
     Object.entries(r.checks).forEach(([k, ok]) => { const e = $('chk-' + k); e.textContent = ok ? '✓ Found' : '✗ Missing'; e.className = ok ? 'text-emerald-400' : 'text-rose-400'; });
+    const breakdown = r.scoreBreakdown || {};
+    $('score-method').textContent = r.methodology || 'Weighted estimate based on keyword coverage and resume structure.';
+    $('score-breakdown').textContent = Object.entries(breakdown).map(([k, v]) => `${k}: ${v}%`).join(' · ');
   }
 
   // ---- tailor + preview ----
@@ -121,7 +159,8 @@
   }
   function onTailor() {
     const resume = $('resume-text').value.trim();
-    if (!resume) return showError('Upload or paste your resume first.');
+    const resumeError = validateResume();
+    if (resumeError) return showError(resumeError);
     hideError();
     tailored = ATS.tailor(resume, $('jd-text').value.trim());
     applyOrder(); render();
