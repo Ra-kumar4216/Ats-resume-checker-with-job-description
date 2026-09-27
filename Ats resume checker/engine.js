@@ -133,15 +133,34 @@
 
   const REORDER = new Set(["experience", "projects", "skills"]);
 
+  // Treat common spelling variants as one skill so the same requirement is
+  // never counted twice (for example, Node, Node.js and NodeJS).
+  const CANONICAL = new Map([
+    ["node", "node.js"], ["nodejs", "node.js"],
+    ["nextjs", "next.js"], ["sklearn", "scikit-learn"],
+    ["dotnet", ".net"], ["html5", "html"], ["css3", "css"],
+  ]);
+  const VARIANTS = new Map([
+    ["node.js", ["node", "nodejs"]],
+    ["next.js", ["nextjs"]],
+    ["scikit-learn", ["sklearn"]],
+    [".net", ["dotnet"]],
+    ["html", ["html5"]],
+    ["css", ["css3"]],
+  ]);
+
   // ============================================================
   // HELPERS
   // ============================================================
 
   const norm = (s) =>
     String(s ?? "")
+      .replace(/[\u200B-\u200D\uFEFF]/g, "")
       .replace(/\s+/g, " ")
       .trim()
       .toLowerCase();
+
+  const canonicalize = (s) => CANONICAL.get(norm(s)) || norm(s);
 
   const esc = (s) =>
     String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -160,14 +179,18 @@
   const cache = new Map();
 
   function pattern(kw) {
-    const key = norm(kw);
+    const key = canonicalize(kw);
 
     if (!cache.has(key)) {
-      const [left, right] = bounds(key);
-
+      const variants = [key, ...(VARIANTS.get(key) || []), ...KEYWORDS.filter((candidate) => canonicalize(candidate) === key && norm(candidate) !== key)]
+        .map(norm).filter((value, index, all) => all.indexOf(value) === index);
+      const alternatives = variants.map((variant) => {
+        const [left, right] = bounds(variant);
+        return left + esc(variant) + right;
+      }).join("|");
       cache.set(
         key,
-        new RegExp(left + esc(key) + right, "i"),
+        new RegExp(`(?:${alternatives})`, "i"),
       );
     }
 
@@ -296,7 +319,7 @@
     const found = new Set();
 
     const add = (value) => {
-      const k = norm(value);
+      const k = canonicalize(value);
 
       if (isUsable(k)) {
         found.add(k);
@@ -463,37 +486,37 @@
   const SECTIONS = [
     [
       "summary",
-      /^(?:(?:professional|career)\s+)?(?:summary|profile|objective|about me)$/i,
+      /^(?:(?:professional|career|executive)\s+)?(?:summary|profile|objective|about me|professional profile)$/i,
     ],
 
     [
       "skills",
-      /^(?:(?:technical|core|key)\s+)?(?:skills|competenc(?:y|ies)|technologies)$/i,
+      /^(?:(?:technical|core|key|relevant)\s+)?(?:skills|competenc(?:y|ies)|technologies|proficiencies|technical proficiencies|tools)$/i,
     ],
 
     [
       "experience",
-      /^(?:(?:(?:professional|relevant)\s+)?(?:work|internship|intern)(?:\s*(?:\/|&|and)\s*(?:work|internship|intern))?\s+experience|experience|employment\s+history|(?:(?:concurrent|remote|multiple)\s+)*internships?|industrial\s+training)$/i,
+      /^(?:(?:(?:professional|relevant)\s+)?(?:work|internship|intern)(?:\s*(?:\/|&|and)\s*(?:work|internship|intern))?\s+experience|experience|professional experience|work history|employment\s+history|career history|(?:(?:concurrent|remote|multiple)\s+)*internships?|industrial\s+training)$/i,
     ],
 
     [
       "projects",
-      /^(?:(?:selected|personal|academic|key)\s+)?projects?$/i,
+      /^(?:(?:selected|personal|academic|key|relevant)\s+)?projects?(?: portfolio)?$/i,
     ],
 
     [
       "education",
-      /^(?:(?:academic|qualifications?)\s+)?background$|^education(?:\s*(?:&|and)\s+(?:qualifications?|details?))?$/i,
+      /^(?:(?:academic|qualifications?|educational)\s+)?background$|^education(?:\s*(?:&|and)\s+(?:qualifications?|details?))?$|^academic qualifications?$/i,
     ],
 
     [
       "certifications",
-      /^(?:professional\s+)?(?:certifications?|certificates?|licenses?)$/i,
+      /^(?:professional\s+)?(?:certifications?|certificates?|licenses?|training)$/i,
     ],
 
     [
       "other",
-      /^(?:achievements?|awards?|languages?|interests?|hobbies|extracurriculars?|volunteering)$/i,
+      /^(?:achievements?|awards?|languages?|interests?|hobbies|extracurriculars?|volunteering|additional information)$/i,
     ],
   ];
 
@@ -514,6 +537,7 @@
     }
 
     const n = t
+      .replace(/^\s*(?:\d+[.)]|[-•])\s*/, "")
       .replace(/^[#*_\s]+|[#*_\s:]+$/g, "")
       .replace(/\s+/g, " ");
 
@@ -538,6 +562,8 @@
     ];
 
     String(text ?? "")
+      .replace(/\r\n?/g, "\n")
+      .replace(/[\u00A0\u202F]/g, " ")
       .split("\n")
       .forEach((line) => {
         const key = detectSection(line);
@@ -1119,6 +1145,11 @@
     const passed =
       Object.values(checks).filter(Boolean)
         .length;
+    const words = resume.split(/\s+/).filter(Boolean).length;
+    const bullets = resume.split("\n").filter(isBullet).length;
+    const verbs = (resume.match(VERBS) || []).length;
+    const quant = (resume.match(/\d+(\.\d+)?\s?%|[$₹]\s?\d|\b\d+(\.\d+)?x\b/gi) || []).length;
+    const contentSignals = Math.min(1, (Math.min(bullets, 5) / 5) * 0.5 + (Math.min(verbs, 5) / 5) * 0.3 + (Math.min(quant, 2) / 2) * 0.2);
 
     // ==========================================================
     // JD MODE
@@ -1137,18 +1168,20 @@
         (keyword) =>
           !matched.includes(keyword),
       );
+      const keywordCoverage = keywords.length ? matched.length / keywords.length : 0;
+      const structureCoverage = passed / 4;
+      const scoreBreakdown = {
+        "keyword coverage": Math.round(keywordCoverage * 100),
+        "structure checks": Math.round(structureCoverage * 100),
+        "content signals": Math.round(contentSignals * 100),
+      };
 
       return {
         mode: "jd",
 
-        score: Math.round(
-          (keywords.length
-            ? (matched.length /
-                keywords.length) *
-              80
-            : 0) +
-            (passed / 4) * 20,
-        ),
+        score: Math.round(keywordCoverage * 60 + structureCoverage * 25 + contentSignals * 15),
+        scoreBreakdown,
+        methodology: "Estimate: 60% canonical JD keyword coverage, 25% resume structure checks, 15% content signals (bullets, action verbs, measurable results). Not a prediction of recruiter or ATS decisions.",
 
         matched,
         missing,
@@ -1162,25 +1195,6 @@
     // ==========================================================
     // GENERAL RESUME MODE
     // ==========================================================
-
-    const words = resume
-      .split(/\s+/)
-      .filter(Boolean).length;
-
-    const bullets = resume
-      .split("\n")
-      .filter(isBullet).length;
-
-    const verbs =
-      (resume.match(VERBS) || [])
-        .length;
-
-    const quant =
-      (
-        resume.match(
-          /\d+(\.\d+)?\s?%|[$₹]\s?\d|\b\d+(\.\d+)?x\b/gi,
-        ) || []
-      ).length;
 
     const okLen =
       words >= 300 &&
@@ -1265,6 +1279,14 @@
       mode: "general",
 
       score: total,
+      scoreBreakdown: {
+        "structure checks": Math.round((passed / 4) * 100),
+        "length": Math.round((okLen ? 1 : words > 0 ? 0.5 : 0) * 100),
+        "bullet quality": Math.round((bullets >= 3 ? 1 : bullets > 0 ? 0.5 : 0) * 100),
+        "action verbs": Math.round((verbs >= 3 ? 1 : verbs > 0 ? 0.5 : 0) * 100),
+        "measurable results": Math.round((quant >= 2 ? 1 : quant > 0 ? 0.5 : 0) * 100),
+      },
+      methodology: "Estimate: structure 40%, length 15%, bullets 15%, action verbs 15%, measurable results 15%. This is a writing-quality heuristic, not a prediction of ATS or recruiter decisions.",
 
       matched:
         KEYWORDS.filter(
