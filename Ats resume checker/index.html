@@ -2,13 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ATS Tracker Pro</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap">
+<title>ATS Tracker Pro — Resume Match Estimate</title>
+<link rel="stylesheet" href="tailwind.generated.css">
 <link rel="stylesheet" href="styles.css">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js" defer></script>
+<script src="assets/vendor/pdf.min.js" defer></script>
+<script src="assets/vendor/mammoth.browser.min.js" defer></script>
 </head>
 
 <body class="bg-slate-950 text-slate-100 min-h-screen">
@@ -47,7 +45,7 @@
     <svg viewBox="0 0 24 24" class="w-8 h-8 shrink-0 text-emerald-400" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3 20 7v5c0 4.6-3.1 7.7-8 9-4.9-1.3-8-4.4-8-9V7l8-4Z"/><path d="m9 12 2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <div>
       <p class="text-sm font-semibold text-emerald-300">Your data stays private</p>
-      <p class="text-xs text-slate-400 mt-0.5">All processing happens in your browser. No data is sent to any server.</p>
+      <p class="text-xs text-slate-400 mt-0.5">Resume processing stays in your browser; this app does not upload it to a backend.</p>
     </div>
   </div>
 </aside>
@@ -92,13 +90,13 @@
         <section id="hero" class="space-y-5">
           <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-300 bg-violet-500/10 border border-violet-500/30 px-3 py-1.5 rounded-full">
             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 5.6L19 9.5l-5.2 1.9L12 17l-1.8-5.6L5 9.5l5.2-1.9L12 2Z"/></svg>
-            AI-Powered Resume Analysis
+            Evidence-based resume analysis
           </span>
           <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">Find Your <span class="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">Perfect Match</span></h1>
-          <p class="text-slate-400 max-w-2xl">Analyze your resume against job descriptions, get ATS scores, find missing keywords and improve your chances of getting hired.</p>
+          <p class="text-slate-400 max-w-2xl">Compare your resume with a job description, get a transparent match estimate, find missing keywords and improve your application.</p>
 
           <div class="flex flex-wrap gap-x-6 gap-y-3 pt-1">
-            <div class="flex items-center gap-2 text-sm text-slate-300"><span class="feature-dot"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor" aria-hidden="true"><path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/></svg></span>ATS-friendly Analysis</div>
+            <div class="flex items-center gap-2 text-sm text-slate-300"><span class="feature-dot"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor" aria-hidden="true"><path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/></svg></span>ATS-aware Analysis</div>
             <div class="flex items-center gap-2 text-sm text-slate-300"><span class="feature-dot"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3" stroke-linecap="round"/></svg></span>Keyword Matching</div>
             <div class="flex items-center gap-2 text-sm text-slate-300"><span class="feature-dot"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9"/></svg></span>Resume Structure Check</div>
             <div class="flex items-center gap-2 text-sm text-slate-300"><span class="feature-dot"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 20 7v5c0 4.6-3.1 7.7-8 9-4.9-1.3-8-4.4-8-9V7l8-4Z"/></svg></span>Runs Privately in Your Browser</div>
@@ -215,7 +213,7 @@
               <label for="jd-text" class="text-sm font-semibold text-slate-300">Job description <span class="font-normal text-slate-400">(optional)</span></label>
               <span id="jd-count" class="text-xs text-slate-400">0 words</span>
             </div>
-            <textarea id="jd-text" class="field h-40" placeholder="Without a JD you get a general ATS score, and tailoring only applies the template."></textarea>
+            <textarea id="jd-text" class="field h-40" placeholder="Without a JD you get a general resume-quality estimate, and tailoring only applies the template."></textarea>
           </section>
 
           <div class="flex justify-between">
@@ -229,12 +227,12 @@
           <div class="flex items-center justify-between flex-wrap gap-3">
             <div>
               <h2 class="text-lg font-bold">Analyze your resume</h2>
-              <p class="text-sm text-slate-400 mt-1">Run the check to see your ATS score and report.</p>
+              <p class="text-sm text-slate-400 mt-1">Run the check to see a transparent match estimate and report.</p>
             </div>
             <button id="analyze-btn" type="button" class="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-semibold px-6 py-3 rounded-xl shrink-0">Analyze &amp; score</button>
           </div>
 
-          <div id="placeholder-result" class="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center text-slate-400 min-h-[220px] flex items-center justify-center">Your ATS report appears here after you click Analyze.</div>
+          <div id="placeholder-result" class="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center text-slate-400 min-h-[220px] flex items-center justify-center">Your match estimate appears here after you click Analyze.</div>
 
           <div id="analysis-result" class="hidden bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
             <div class="flex items-center justify-between flex-wrap gap-3 border-b border-slate-800 pb-5">
@@ -244,7 +242,7 @@
 
             <div class="flex flex-col items-center">
               <div class="relative w-36 h-36 flex items-center justify-center">
-                <svg class="w-full h-full -rotate-90" viewBox="0 0 144 144" role="img" aria-label="ATS score gauge">
+                <svg class="w-full h-full -rotate-90" viewBox="0 0 144 144" role="img" aria-label="Match estimate gauge">
                   <circle cx="72" cy="72" r="60" stroke="#1e293b" stroke-width="12" fill="none"/>
                   <circle id="score-circle" cx="72" cy="72" r="60" stroke="#8b5cf6" stroke-width="12" fill="none" stroke-dasharray="377" stroke-dashoffset="377" stroke-linecap="round" style="transition:stroke-dashoffset 1s"/>
                 </svg>
@@ -252,6 +250,8 @@
               </div>
               <h4 id="score-status" class="font-bold mt-3"></h4>
               <span id="mode-badge" class="text-xs mt-1 px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700"></span>
+              <p id="score-method" class="max-w-xl text-center text-xs text-slate-400 mt-3"></p>
+              <p id="score-breakdown" class="max-w-xl text-center text-xs text-violet-300 mt-1"></p>
             </div>
 
             <div id="report-details" class="grid sm:grid-cols-2 gap-4">
@@ -291,7 +291,7 @@
               <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 mr-auto">Tailored resume preview</h3>
               <div id="template-picker"></div>
               <label class="flex items-center gap-1.5"><input type="checkbox" id="highlight-toggle" class="accent-violet-500" checked> Highlight keywords</label>
-              <label class="flex items-center gap-1.5"><input type="checkbox" id="jd-only-toggle" class="accent-violet-500" checked> Only JD-relevant lines</label>
+              <label class="flex items-center gap-1.5"><input type="checkbox" id="jd-only-toggle" class="accent-violet-500"> Only JD-relevant lines</label>
 
               <div class="flex gap-2">
                 <button id="print-btn" type="button" class="bg-violet-600 hover:bg-violet-500 px-3 py-1.5 rounded-lg">Print / Save as PDF</button>
@@ -322,7 +322,7 @@
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
           <p class="text-sm font-bold mb-4">Quick Features</p>
           <ul class="space-y-3.5 text-sm">
-            <li class="flex gap-3"><span class="feature-dot"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor" aria-hidden="true"><path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/></svg></span><span><span class="block font-semibold">ATS Score</span><span class="text-xs text-slate-400">Know your match percentage</span></span></li>
+            <li class="flex gap-3"><span class="feature-dot"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor" aria-hidden="true"><path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 2-2Z"/></svg></span><span><span class="block font-semibold">Match Estimate</span><span class="text-xs text-slate-400">See the score components</span></span></li>
             <li class="flex gap-3"><span class="feature-dot"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3" stroke-linecap="round"/></svg></span><span><span class="block font-semibold">Keyword Analysis</span><span class="text-xs text-slate-400">Find missing keywords</span></span></li>
             <li class="flex gap-3"><span class="feature-dot"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9"/></svg></span><span><span class="block font-semibold">Resume Health Check</span><span class="text-xs text-slate-400">Improve your resume quality</span></span></li>
             <li class="flex gap-3"><span class="feature-dot"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 20 7v5c0 4.6-3.1 7.7-8 9-4.9-1.3-8-4.4-8-9V7l8-4Z"/></svg></span><span><span class="block font-semibold">Tailored Resume</span><span class="text-xs text-slate-400">Get job-specific resume</span></span></li>
@@ -337,8 +337,8 @@
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
           <p class="text-sm font-bold mb-3">Why Choose ATS Tracker Pro?</p>
           <ul class="space-y-2.5 text-sm text-slate-300">
-            <li class="flex items-start gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" fill="currentColor" aria-hidden="true"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z"/></svg>100% Private &amp; Secure (No data leaves your browser)</li>
-            <li class="flex items-start gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" fill="currentColor" aria-hidden="true"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z"/></svg>Accurate ATS matching against real job descriptions</li>
+            <li class="flex items-start gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" fill="currentColor" aria-hidden="true"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z"/></svg>Local resume processing (no backend upload)</li>
+            <li class="flex items-start gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" fill="currentColor" aria-hidden="true"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z"/></svg>Transparent keyword and structure estimate</li>
             <li class="flex items-start gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" fill="currentColor" aria-hidden="true"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z"/></svg>Practical resume improvement suggestions</li>
             <li class="flex items-start gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" fill="currentColor" aria-hidden="true"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z"/></svg>Supports PDF, DOCX and TXT uploads</li>
             <li class="flex items-start gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" fill="currentColor" aria-hidden="true"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z"/></svg>Simple, clean and easy to use</li>
