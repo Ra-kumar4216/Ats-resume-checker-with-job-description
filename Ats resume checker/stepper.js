@@ -48,21 +48,37 @@
   }
 
   const on = (id, evt, fn) => { const el = $(id); if (el) el.addEventListener(evt, fn); };
+  const validateResume = () => {
+    const message = window.ATSApp && window.ATSApp.validateResume ? window.ATSApp.validateResume() : (!$('resume-text').value.trim() ? 'Upload or paste your resume first.' : '');
+    if (message && window.ATSApp) window.ATSApp.showError(message);
+    return !message;
+  };
+  const validateJD = () => {
+    const message = window.ATSApp && window.ATSApp.validateJobDescription ? window.ATSApp.validateJobDescription() : (!$('jd-text').value.trim() ? 'Please add the job description before continuing.' : '');
+    if (message && window.ATSApp) window.ATSApp.showError(message);
+    return !message;
+  };
 
   on('continue-with-jd', 'click', () => { mode = 'jd'; goTo(2); });
   on('continue-without-jd', 'click', () => { mode = 'general'; goTo(2); });
   on('step2-back', 'click', () => goTo(1));
-  on('step2-next', 'click', () => goTo(nextOf(2)));
+  on('step2-next', 'click', () => { if (validateResume()) goTo(nextOf(2)); });
   on('step3-back', 'click', () => goTo(2));
-  on('step3-next', 'click', () => goTo(4));
+  on('step3-next', 'click', () => { if (validateResume() && validateJD()) goTo(4); });
   on('step4-back', 'click', () => goTo(prevOf(4)));
   on('step5-back', 'click', () => goTo(4));
 
   // These two buttons already run the real analysis/tailoring logic in app.js.
   // Here we only mark step 4 as reached, and move into step 5 once a tailored
   // resume has been generated — the actual content is rendered by app.js.
-  on('analyze-btn', 'click', () => { furthest = Math.max(furthest, 4); });
-  on('tailor-btn', 'click', () => goTo(5));
+  on('analyze-btn', 'click', () => {
+    const resumeOk = validateResume();
+    const jdOk = mode === 'jd' ? validateJD() : true;
+    if (resumeOk && jdOk) furthest = Math.max(furthest, 4);
+  });
+  on('tailor-btn', 'click', () => {
+    if (validateResume() && !$('analysis-result').classList.contains('hidden')) goTo(5);
+  });
 
   dots.forEach((dot) => {
     dot.addEventListener('click', () => { if (!dot.disabled) goTo(Number(dot.dataset.step)); });
