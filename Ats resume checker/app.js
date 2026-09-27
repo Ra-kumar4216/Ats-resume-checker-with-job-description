@@ -192,16 +192,16 @@
     requestAnimationFrame(() => requestAnimationFrame(window.print));
   });
 
-  // ---- templates (needs http://, fetch() does not work from file://) ----
+  // ---- templates (embedded in resume-templates/selector.js, not fetched — see its header comment) ----
   (async function () {
     if (!window.ResumeTemplates) return;
     try {
-      const list = await ResumeTemplates.loadTemplates('./resume-templates');
+      const list = await ResumeTemplates.loadTemplates();
       template = ResumeTemplates.getTemplate(list, 'modern-blue');
       const sel = ResumeTemplates.mountSelector($('template-picker'), list, (t) => {
         template = t; ResumeTemplates.applyTemplate($('resume-page'), t); applyOrder(); render();
       });
       sel.value = template.id; ResumeTemplates.applyTemplate($('resume-page'), template);
-    } catch (e) { console.warn('Templates unavailable. Serve over http (npx serve .).', e); }
+    } catch (e) { console.warn('Could not load resume templates.', e); }
   })();
 })();
