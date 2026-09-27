@@ -119,7 +119,7 @@
 
   const GENERIC = new Set(
     `
-    ai api rest boot cloud design test testing data work team software
+    ai boot cloud design test testing data work team software
     technology technologies development developer engineering engineer
     communication leadership management analytics candidate position role
     business solution solutions system systems application applications
@@ -370,10 +370,17 @@
     //
     // Example:
     // "Pandas and NumPy are required"
+    //
+    // IMPORTANT: both tokens must start with a capital letter (real
+    // tool/library names are capitalized in JDs — React, NumPy, Svelte).
+    // Without this, the pattern also matched ordinary lowercase sentence
+    // grammar ("clearly and effectively", "independently and
+    // collaboratively", "Science or related field") and injected those as
+    // fake keywords. No /i flag on purpose — it must stay case-sensitive.
     // ----------------------------------------------------------
 
     const andPairRegex =
-      /\b([A-Za-z][A-Za-z0-9+#.\-]{1,30})\s+(?:and|or|\/|&)\s+([A-Za-z][A-Za-z0-9+#.\-]{1,30})\b/gi;
+      /\b([A-Z][A-Za-z0-9+#.\-]{1,30})\s+(?:and|or|\/|&)\s+([A-Z][A-Za-z0-9+#.\-]{1,30})\b/g;
 
     while ((match = andPairRegex.exec(source)) !== null) {
       add(match[1]);
