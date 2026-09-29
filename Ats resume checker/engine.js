@@ -90,9 +90,29 @@
     "seaborn",
     "tensorflow",
     "pytorch",
+    "keras",
     "opencv",
     "power bi",
     "tableau",
+
+    // AI/ML terms that previously only surfaced (unreliably) via signal-phrase
+    // or capitalized-word detection. "js" is deliberately NOT added as a bare
+    // alias: resumes that list project files (app.js, engine.js) would match
+    // "\bjs\b" on the file extension itself, since a preceding "." still
+    // counts as a word boundary. "javascript" (already above) still matches.
+    "artificial intelligence",
+    "nlp",
+    "llm",
+    "rag",
+    "langchain",
+    "hugging face",
+    "fastapi",
+    "openai",
+    "generative ai",
+    "prompt engineering",
+    "vector database",
+    "rest api",
+    "api",
   ];
 
   // ============================================================
@@ -119,13 +139,15 @@
 
   const GENERIC = new Set(
     `
-    ai boot cloud design test testing data work team software
+    boot cloud design test testing data work team software
     technology technologies development developer engineering engineer
     communication leadership management analytics candidate position role
     business solution solutions system systems application applications
     programming program technical technicalskills
     bachelor bachelors master masters degree graduate graduation
     education qualification qualifications
+    methodology methodologies concept concepts fundamentals fundamental
+    principle principles
     `
       .trim()
       .split(/\s+/),
@@ -139,6 +161,19 @@
     ["node", "node.js"], ["nodejs", "node.js"],
     ["nextjs", "next.js"], ["sklearn", "scikit-learn"],
     ["dotnet", ".net"], ["html5", "html"], ["css3", "css"],
+    // "ai"/"ml" are routed through their long canonical form because a bare
+    // 2-character token fails the 3-char minimum in isUsable() below (same
+    // reason node/nodejs redirect to "node.js" instead of staying bare).
+    ["ai", "artificial intelligence"],
+    ["ml", "machine learning"],
+    ["llms", "llm"],
+    ["huggingface", "hugging face"],
+    ["genai", "generative ai"],
+    ["gen ai", "generative ai"],
+    ["apis", "api"],
+    ["rest apis", "rest api"],
+    ["restful api", "rest api"],
+    ["restful apis", "rest api"],
   ]);
   const VARIANTS = new Map([
     ["node.js", ["node", "nodejs"]],
@@ -147,6 +182,15 @@
     [".net", ["dotnet"]],
     ["html", ["html5"]],
     ["css", ["css3"]],
+    ["artificial intelligence", ["ai"]],
+    ["machine learning", ["ml"]],
+    ["llm", ["llms", "large language model", "large language models"]],
+    ["nlp", ["natural language processing"]],
+    ["rag", ["retrieval augmented generation", "retrieval-augmented generation"]],
+    ["hugging face", ["huggingface"]],
+    ["generative ai", ["genai", "gen ai"]],
+    ["vector database", ["vector db", "vector databases"]],
+    ["rest api", ["rest apis", "restful api", "restful apis"]],
   ]);
 
   // ============================================================
@@ -208,25 +252,37 @@
 
     if (!k) return false;
 
-    // Exact stop/generic words
-    if (STOP.has(k)) return false;
-    if (GENERIC.has(k)) return false;
+    // A term that is explicitly whitelisted in the KEYWORDS dictionary is
+    // always usable, even when one of its individual words would normally
+    // be filtered as generic/stop noise on its own. Without this, "spring
+    // boot" was silently unextractable (its own token "boot" is in
+    // GENERIC), and the same would have quietly broken "prompt
+    // engineering" ("engineering" is in GENERIC) the moment it was added.
+    const isDictionaryTerm = KEYWORDS.some(
+      (entry) => norm(entry) === k,
+    );
 
-    // Education words should not become ATS skills
-    const educationWords = new Set([
-      "bachelor",
-      "bachelors",
-      "master",
-      "masters",
-      "degree",
-      "graduate",
-      "graduation",
-      "education",
-      "qualification",
-      "qualifications",
-    ]);
+    if (!isDictionaryTerm) {
+      // Exact stop/generic words
+      if (STOP.has(k)) return false;
+      if (GENERIC.has(k)) return false;
 
-    if (educationWords.has(k)) return false;
+      // Education words should not become ATS skills
+      const educationWords = new Set([
+        "bachelor",
+        "bachelors",
+        "master",
+        "masters",
+        "degree",
+        "graduate",
+        "graduation",
+        "education",
+        "qualification",
+        "qualifications",
+      ]);
+
+      if (educationWords.has(k)) return false;
+    }
 
     // Very short values are normally noise
     const compact = k.replace(/[^a-z0-9+#.]/g, "");
@@ -245,6 +301,7 @@
 
     // Every token must be meaningful
     if (
+      !isDictionaryTerm &&
       tokens.some(
         (token) =>
           token.length < 2 ||
@@ -436,10 +493,45 @@
     });
 
     // ----------------------------------------------------------
-    // 6. Preserve predefined keyword order first
+    // 6. Drop keywords that are a strict word-subset of a longer one
+    //
+    // A JD mentioning "Spring Boot" also makes the bare dictionary entry
+    // "spring" match (word-boundary substring), and "REST APIs and MySQL"
+    // can independently surface both "rest api" and a stray "api". Both are
+    // really one requirement counted twice, which inflates the denominator
+    // and can make an unrelated keyword falsely show as "missing". Drop the
+    // shorter keyword only when its words are an exact contiguous run
+    // inside the longer one (token-for-token, not a plain substring test —
+    // "sql" is not dropped just because "mysql" is present, since "mysql"
+    // is one token, not two).
     // ----------------------------------------------------------
 
-    const result = [...found];
+    const candidates = [...found];
+    const drop = new Set();
+
+    candidates.forEach((shortKw) => {
+      const shortTokens = shortKw.split(" ");
+
+      candidates.forEach((longKw) => {
+        if (shortKw === longKw) return;
+
+        const longTokens = longKw.split(" ");
+
+        if (shortTokens.length >= longTokens.length) return;
+
+        for (let i = 0; i <= longTokens.length - shortTokens.length; i++) {
+          if (
+            longTokens.slice(i, i + shortTokens.length).join(" ") ===
+            shortKw
+          ) {
+            drop.add(shortKw);
+            break;
+          }
+        }
+      });
+    });
+
+    const result = candidates.filter((k) => !drop.has(k));
 
     return result.slice(0, 40);
   }
@@ -491,7 +583,7 @@
 
     [
       "skills",
-      /^(?:(?:technical|core|key|relevant)\s+)?(?:skills|competenc(?:y|ies)|technologies|proficiencies|technical proficiencies|tools)$/i,
+      /^(?:(?:technical|core|key|relevant)\s+)?(?:skills(?:\s*(?:&|and)\s*(?:tools?|technologies|technology))?|competenc(?:y|ies)|technologies|proficiencies|technical proficiencies|tools)$/i,
     ],
 
     [
@@ -506,12 +598,12 @@
 
     [
       "education",
-      /^(?:(?:academic|qualifications?|educational)\s+)?background$|^education(?:\s*(?:&|and)\s+(?:qualifications?|details?))?$|^academic qualifications?$/i,
+      /^education$|^education\s*(?:&|and)\s*(?:qualifications?|details?)$|^education\s+details?$|^(?:academic|educational)\s+(?:background|qualifications?|details?)$/i,
     ],
 
     [
       "certifications",
-      /^(?:professional\s+)?(?:certifications?|certificates?|licenses?|training)$/i,
+      /^(?:professional\s+)?(?:certifications?|certificates?|licenses?|courses?|training)$/i,
     ],
 
     [
@@ -545,11 +637,31 @@
       return null;
     }
 
-    const hit = SECTIONS.find(([, regex]) =>
-      regex.test(n),
-    );
+    const direct = SECTIONS.find(([, regex]) => regex.test(n));
 
-    return hit ? hit[0] : null;
+    if (direct) return direct[0];
+
+    // Combined headers ("Experience & Projects", "Achievements &
+    // Certifications") name two things under one line. We can only tag a
+    // section with a single key, so without this the whole heading (and
+    // everything under it) went undetected and silently fell into
+    // whatever section came before it — which also meant its content never
+    // counted toward the experience/projects structure checks. Try each
+    // connector-separated part and use the first one that matches a known
+    // section; this only fires when the whole heading did not already
+    // match above, so plain single-topic headers are unaffected.
+    const parts = n
+      .split(/\s*(?:&|,|\/|\band\b)\s*/i)
+      .filter(Boolean);
+
+    if (parts.length > 1) {
+      for (const part of parts) {
+        const hit = SECTIONS.find(([, regex]) => regex.test(part));
+        if (hit) return hit[0];
+      }
+    }
+
+    return null;
   }
 
   function parseSections(text) {
@@ -1111,8 +1223,63 @@
   // ACTION VERBS
   // ============================================================
 
-  const VERBS =
-    /\b(managed|led|developed|created|improved|increased|reduced|achieved|designed|implemented|built|launched|coordinated|analyzed|delivered|streamlined|optimized|spearheaded|initiated|executed|drove|generated|negotiated|mentored|trained|automated|architected|orchestrated|resolved|established)\b/gi;
+  // The original list only had past-tense forms of ~30 verbs, and was
+  // missing common engineering-resume verbs entirely (deployed, integrated,
+  // engineered, collaborated, wrote, configured, maintained, debugged...).
+  // A real bullet like "Deployed a Spring Boot service" or "Wrote CRUD
+  // APIs" scored zero action verbs under the old list.
+  const VERB_WORDS = [
+    "managed", "manage", "managing",
+    "led", "lead", "leading",
+    "developed", "develop", "developing",
+    "created", "create", "creating",
+    "improved", "improve", "improving",
+    "increased", "increase", "increasing",
+    "reduced", "reduce", "reducing",
+    "achieved", "achieve", "achieving",
+    "designed", "design", "designing",
+    "implemented", "implement", "implementing",
+    "built", "build", "building",
+    "launched", "launch", "launching",
+    "coordinated", "coordinate", "coordinating",
+    "analyzed", "analysed", "analyze", "analyse", "analyzing", "analysing",
+    "delivered", "deliver", "delivering",
+    "streamlined", "streamline", "streamlining",
+    "optimized", "optimised", "optimize", "optimise", "optimizing", "optimising",
+    "spearheaded", "spearhead", "spearheading",
+    "initiated", "initiate", "initiating",
+    "executed", "execute", "executing",
+    "drove", "drive", "driving", "driven",
+    "generated", "generate", "generating",
+    "negotiated", "negotiate", "negotiating",
+    "mentored", "mentor", "mentoring",
+    "trained", "train", "training",
+    "automated", "automate", "automating",
+    "architected", "architect", "architecting",
+    "orchestrated", "orchestrate", "orchestrating",
+    "resolved", "resolve", "resolving",
+    "established", "establish", "establishing",
+    "deployed", "deploy", "deploying",
+    "integrated", "integrate", "integrating",
+    "engineered", "engineer", "engineering",
+    "collaborated", "collaborate", "collaborating",
+    "wrote", "write", "writing",
+    "configured", "configure", "configuring",
+    "organized", "organised", "organize", "organise", "organizing", "organising",
+    "maintained", "maintain", "maintaining",
+    "migrated", "migrate", "migrating",
+    "refactored", "refactor", "refactoring",
+    "debugged", "debug", "debugging",
+    "documented", "document", "documenting",
+    "researched", "research", "researching",
+    "presented", "present", "presenting",
+    "scaled", "scale", "scaling",
+    "secured", "secure", "securing",
+    "contributed", "contribute", "contributing",
+    "participated", "participate", "participating",
+  ];
+
+  const VERBS = new RegExp(`\\b(?:${VERB_WORDS.join("|")})\\b`, "gi");
 
   // ============================================================
   // RESUME ANALYSIS
@@ -1148,7 +1315,14 @@
     const words = resume.split(/\s+/).filter(Boolean).length;
     const bullets = resume.split("\n").filter(isBullet).length;
     const verbs = (resume.match(VERBS) || []).length;
-    const quant = (resume.match(/\d+(\.\d+)?\s?%|[$₹]\s?\d|\b\d+(\.\d+)?x\b/gi) || []).length;
+    // The original only caught %, currency and "Nx" multipliers, so bullets
+    // like "500+ users", "cut runtime from 8s to 2s", or "12 team members"
+    // scored zero measurable results despite clearly having numbers. This
+    // adds counted units; it intentionally requires a unit word right after
+    // the number (not a bare number alone) so dates like "Mar 2026" and
+    // phone numbers are not miscounted as achievements.
+    const QUANT_UNITS = "k|m|ms|s|sec|secs|seconds|min|mins|minutes|hrs?|hours?|days?|weeks?|months?|years?|users?|customers?|clients?|members?|requests?|records?|rows?|people|engineers?|developers?|teams?";
+    const quant = (resume.match(new RegExp(`\\d+(\\.\\d+)?\\s?%|[$₹]\\s?\\d[\\d,]*|\\b\\d+(\\.\\d+)?x\\b|\\b\\d+\\+(?=\\s)|\\b\\d+(?:\\.\\d+)?\\s?(?:${QUANT_UNITS})\\b`, "gi")) || []).length;
     const contentSignals = Math.min(1, (Math.min(bullets, 5) / 5) * 0.5 + (Math.min(verbs, 5) / 5) * 0.3 + (Math.min(quant, 2) / 2) * 0.2);
 
     // ==========================================================
@@ -1168,20 +1342,52 @@
         (keyword) =>
           !matched.includes(keyword),
       );
-      const keywordCoverage = keywords.length ? matched.length / keywords.length : 0;
+
+      // A keyword pasted into the Skills line counts for less than one
+      // actually demonstrated in Experience/Projects/Summary. Without this,
+      // a resume that just lists every JD keyword in one line with no real
+      // content behind it scores almost the same as an honest resume that
+      // proves each one — a plain word-search can't tell "know Docker" from
+      // "used Docker to ship a service serving 500 users".
+      const bodyKeys = new Set(["experience", "projects", "summary"]);
+      const skillsText = sections
+        .filter((section) => section.key === "skills")
+        .map((section) => section.lines.join("\n"))
+        .join("\n");
+      const bodyText = sections
+        .filter((section) => bodyKeys.has(section.key))
+        .map((section) => section.lines.join("\n"))
+        .join("\n");
+
+      const weights = keywords.map((keyword) => {
+        if (pattern(keyword).test(bodyText)) return 1;
+        if (pattern(keyword).test(skillsText)) return 0.5;
+        return 0;
+      });
+      const weightedCoverage = keywords.length
+        ? weights.reduce((a, b) => a + b, 0) / keywords.length
+        : 0;
+
       const structureCoverage = passed / 4;
       const scoreBreakdown = {
-        "keyword coverage": Math.round(keywordCoverage * 100),
+        "keyword coverage": Math.round(weightedCoverage * 100),
         "structure checks": Math.round(structureCoverage * 100),
         "content signals": Math.round(contentSignals * 100),
       };
 
+      // A resume that shares almost no keywords with the JD (wrong role
+      // entirely) can still score a moderate total from structure and
+      // content-quality points alone. That total is a fair writing-quality
+      // read but a misleading "match" read, so flag it separately rather
+      // than silently blending it into one number.
+      const lowRelevance = keywords.length > 0 && weightedCoverage < 0.25;
+
       return {
         mode: "jd",
 
-        score: Math.round(keywordCoverage * 60 + structureCoverage * 25 + contentSignals * 15),
+        score: Math.round(weightedCoverage * 60 + structureCoverage * 25 + contentSignals * 15),
         scoreBreakdown,
-        methodology: "Estimate: 60% canonical JD keyword coverage, 25% resume structure checks, 15% content signals (bullets, action verbs, measurable results). Not a prediction of recruiter or ATS decisions.",
+        methodology: "Estimate: 60% JD keyword coverage (full credit when a keyword is demonstrated in Experience/Projects/Summary, half credit when it only appears in the Skills list), 25% resume structure checks, 15% content signals (bullets, action verbs, measurable results). Not a prediction of recruiter or ATS decisions.",
 
         matched,
         missing,
@@ -1189,6 +1395,7 @@
 
         noKeywords:
           keywords.length === 0,
+        lowRelevance,
       };
     }
 
