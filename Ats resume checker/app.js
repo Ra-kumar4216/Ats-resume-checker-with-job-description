@@ -122,7 +122,8 @@
     tags($('missing-tags'), r.missing, 'tag-missing', r.noKeywords ? 'No usable keywords found in this JD; no keyword points awarded.' : 'Nothing missing');
     Object.entries(r.checks).forEach(([k, ok]) => { const e = $('chk-' + k); e.textContent = ok ? '✓ Found' : '✗ Missing'; e.className = ok ? 'text-emerald-400' : 'text-rose-400'; });
     const breakdown = r.scoreBreakdown || {};
-    $('score-method').textContent = r.methodology || 'Weighted estimate based on keyword coverage and resume structure.';
+    $('score-method').textContent = (r.methodology || 'Weighted estimate based on keyword coverage and resume structure.') +
+      (r.lowRelevance ? ' ⚠ Keyword overlap with this JD is very low — this score reflects resume quality, not job fit.' : '');
     $('score-breakdown').textContent = Object.entries(breakdown).map(([k, v]) => `${k}: ${v}%`).join(' · ');
   }
 
