@@ -702,7 +702,7 @@
     /\b(?:19|20)\d{2}\b|'\d{2}\b|\b\d{1,2}\/\d{2,4}\b|\((?:ongoing|present)\)|\||[–—]/i;
 
   const DETAIL_RE =
-    /^\s*(github|live|link|url)\s*:/i;
+    /^\s*(?:(?:github|live|link|url)\s*:|(?:cgpa|gpa|aggregate|percentage|grade)\b)/i;
 
   function splitBlocks(lines) {
     // PDFs hard-wrap long bullets. Glue a wrapped tail back onto its bullet
