@@ -705,7 +705,25 @@
     /^\s*(github|live|link|url)\s*:/i;
 
   function splitBlocks(lines) {
-    const t = lines.map((line) => String(line ?? "").trim());
+    // PDFs hard-wrap long bullets. Glue a wrapped tail back onto its bullet
+    // so it is not mistaken for a new title/bullet.
+    const t = [];
+    let inBullet = false;
+    lines.forEach((raw) => {
+      const line = String(raw ?? "").trim();
+      if (!line) return void t.push("");
+      const prev = t.filter(Boolean).pop() || "";
+      const wrappedTail =
+        inBullet && !isBullet(line) && !DETAIL_RE.test(line) &&
+        (!/[.!?]$/.test(prev) || /^[a-z]/.test(line)) &&
+        !(/^[A-Z]/.test(line) && /\b(?:19|20)\d{2}\b/.test(line));
+      if (wrappedTail) {
+        t[t.lastIndexOf(prev)] = prev + " " + line;
+      } else {
+        t.push(line);
+        inBullet = isBullet(line);
+      }
+    });
 
     const blocks = [];
     let cur = null;
@@ -782,7 +800,7 @@
     `(?:${MON}\\s+)?(?:(?:19|20)\\d{2}|'\\d{2}|\\d{1,2}\\/\\d{2,4})`;
 
   const DATE_RE = new RegExp(
-    `(${DPH}\\s*(?:–|—|-|to)\\s*(?:${DPH}|ongoing|present)|\\(\\s*(?:ongoing|present)\\s*\\)|${DPH}\\s*$)`,
+    `(\\b${MON}\\s*(?:–|—|-|to)\\s*${DPH}|${DPH}\\s*(?:–|—|-|to)\\s*(?:${DPH}|ongoing|present)|\\(\\s*(?:ongoing|present)\\s*\\)|${DPH}\\s*$)`,
     "i",
   );
 
@@ -798,10 +816,8 @@
         .join(" · ");
 
     if (!match) {
-      return {
-        title: clean(t),
-        date: "",
-      };
+      const [head, ...stack] = t.split(/\s{3,}/);
+      return { title: clean(head), date: stack.join(" · ") };
     }
 
     const tail = t
@@ -814,7 +830,7 @@
 
     return {
       title: clean(t.slice(0, match.index)),
-      date: tail ? `${date} · ${tail}` : date,
+      date: tail ? `${date}${tail.startsWith("(") ? " " : " · "}${tail}` : date,
     };
   }
 
@@ -1019,7 +1035,11 @@
         // one-line tagline silently vanished from the rendered/printed
         // resume the moment any real contact line was present. Keep
         // every header line, in order.
-        const show = rest;
+        const show = rest.reduce((a, l) => {
+          if (a.length && /[|,]\s*$/.test(a[a.length - 1])) a[a.length - 1] += " " + l;
+          else a.push(l);
+          return a;
+        }, []).map((l) => l.replace(/\s*\|\s*$/, ""));
 
         html += `<div class="cv-name">${escHtml(
           name,
@@ -1043,8 +1063,7 @@
 
       html += `<div class="cv-section-title">${escHtml(
         TITLES[section.key] ||
-          section.title ||
-          "",
+          (section.title || "").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()),
       )}</div>`;
 
       // Skills
