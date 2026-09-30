@@ -1,4 +1,4 @@
-body{font-family:"Plus Jakarta Sans",system-ui,sans-serif}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .field{width:100%;background:#020617;border:1px solid #334155;border-radius:8px;padding:12px;color:#e2e8f0;font-size:13px}
 .field:focus{outline:2px solid #8b5cf6;border-color:transparent}
 .tag-matched{background:rgba(16,185,129,.1);color:#34d399;border:1px solid rgba(16,185,129,.25)}
@@ -23,13 +23,13 @@ body{font-family:"Plus Jakarta Sans",system-ui,sans-serif}
 #resume-page li,#resume-page p{font-size:var(--cv-base-px,11.5px);margin:2px 0}
 mark.kw-hit{background:#fef08a;color:#1a1a1a;padding:0 1px;border-radius:2px}
 @media print{
-  @page{size:A4;margin:0}
+  @page{size:auto;margin:0}
   html,body{background:#fff!important;margin:0!important}
   html>*:not(body){display:none!important}
   body>*{display:none!important}
   body>#resume-page-scale{display:block!important;overflow:visible!important;height:auto!important}
   #resume-page{max-width:none!important;width:auto!important;transform:none!important;margin:0!important;border-radius:0;padding:10mm 12mm!important;-webkit-box-decoration-break:clone;box-decoration-break:clone}
-  #resume-page .cv-section{break-inside:avoid;page-break-inside:avoid}
+  #resume-page .cv-section{break-inside:auto;page-break-inside:auto}
   #resume-page .cv-block-header-row{break-inside:avoid;page-break-inside:avoid}
   #resume-page .cv-section-title{break-after:avoid;page-break-after:avoid}
   mark.kw-hit{background:none;padding:0}
