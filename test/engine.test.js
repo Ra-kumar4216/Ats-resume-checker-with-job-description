@@ -80,6 +80,14 @@ test('acceptance: technical expertise and publications are separate sections', (
   );
 });
 
+test('acceptance: date-only extracted lines do not render as empty right-aligned titles', () => {
+  const html = ATS.renderHTML([
+    { key: 'education', title: 'Education', lines: ['Bachelor of Computer Applications', '2021'] },
+  ], []);
+  assert.match(html, /cv-block-date-only/);
+  assert.doesNotMatch(html, /cv-block-title"><\/span><span class="cv-block-date">2021/);
+});
+
 test('acceptance: stuffed skills-only resume remains below 40', () => {
   const resume = `Jane Doe\nSkills\n${Array.from({ length: 100 }, () => 'Java, React, Node.js').join(', ')}`;
   assert.ok(ATS.analyze(resume, 'Java, React, Node.js').score < 40);
