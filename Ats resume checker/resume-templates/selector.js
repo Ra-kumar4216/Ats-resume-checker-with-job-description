@@ -37,6 +37,7 @@
     "font", "accent", "basePx", "lineHeight",
     "headingTransform", "headingRule", "nameAlign", "bullet",
   ];
+  const INLINE_TEMPLATES = [{"id":"classic","name":"Classic ATS","description":"Black-and-white, single column, safest for strict parsers.","bestFor":"Any ATS, campus placements","style":{"font":"Calibri, Arial, sans-serif","accent":"#111111","basePx":11.5,"lineHeight":1.45,"headingTransform":"uppercase","headingRule":"1.5px solid #1a1a1a","nameAlign":"left","bullet":"disc"},"sectionOrder":["summary","skills","experience","projects","education","certifications"]},{"id":"compact-one-page","name":"Compact One-Page","description":"Tighter type and spacing to fit one A4 page.","bestFor":"Content-heavy resumes that spill to page 2","style":{"font":"Arial, Helvetica, sans-serif","accent":"#111111","basePx":10.5,"lineHeight":1.3,"headingTransform":"uppercase","headingRule":"1px solid #1a1a1a","nameAlign":"left","bullet":"disc"},"sectionOrder":["summary","skills","experience","projects","education","certifications"]},{"id":"fresher-projects-first","name":"Fresher: Projects First","description":"Education and projects lead; experience follows.","bestFor":"Freshers with projects stronger than work history","style":{"font":"Calibri, Arial, sans-serif","accent":"#1d4ed8","basePx":11.5,"lineHeight":1.45,"headingTransform":"uppercase","headingRule":"1.5px solid #1a1a1a","nameAlign":"left","bullet":"disc"},"sectionOrder":["summary","education","skills","projects","experience","certifications"]},{"id":"minimal-serif","name":"Minimal Serif","description":"Centered name, serif body, thin grey heading rules.","bestFor":"Academic and conservative employers","style":{"font":"Georgia, 'Times New Roman', serif","accent":"#222222","basePx":11.5,"lineHeight":1.5,"headingTransform":"capitalize","headingRule":"1px solid #888888","nameAlign":"center","bullet":"circle"},"sectionOrder":["summary","skills","experience","projects","education","certifications"]},{"id":"modern-blue","name":"Modern Blue","description":"Blue name and section rules; same parser-safe structure.","bestFor":"Product and startup roles","style":{"font":"Calibri, Arial, sans-serif","accent":"#1d4ed8","basePx":11.5,"lineHeight":1.45,"headingTransform":"uppercase","headingRule":"1.5px solid #1d4ed8","nameAlign":"left","bullet":"disc"},"sectionOrder":["summary","skills","experience","projects","education","certifications"]}];
 
   // Used only if fetching the JSON files fails entirely (e.g. opened via file://).
   const FALLBACK_TEMPLATE = {
@@ -93,31 +94,8 @@
   }
 
   async function loadTemplates() {
-    const base = baseUrl();
-
-    const settled = await Promise.allSettled(
-      MANIFEST.map((filename) => fetchTemplate(base + filename, filename)),
-    );
-
-    const templates = [];
-    settled.forEach((result, i) => {
-      if (result.status === "fulfilled") {
-        templates.push(result.value);
-      } else {
-        console.warn(`Skipping template "${MANIFEST[i]}":`, result.reason);
-      }
-    });
-
-    if (!templates.length) {
-      console.warn(
-        "Could not load any template JSON files (opened via file://? try a local server). Using built-in fallback template.",
-      );
-      return [FALLBACK_TEMPLATE];
-    }
-
-    return templates;
+    return INLINE_TEMPLATES.map((template) => ({ ...template, sectionOrder: Array.isArray(template.sectionOrder) && template.sectionOrder.length ? template.sectionOrder : ORDER }));
   }
-
   function getTemplate(list, id) {
     return list.find((t) => t.id === id) || list[0];
   }
