@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Web Clone</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            wa: {
+              teal: '#00a884',
+              tealDark: '#008069',
+              green: '#25D366',
+              lightBg: '#f0f2f5',
+              darkBg: '#111b21',
+              darkHeader: '#202c33',
+              darkSidebar: '#111b21',
+              darkChat: '#0b141a',
+              darkBubbleIn: '#202c33',
+              darkBubbleOut: '#005c4b',
+              lightBubbleIn: '#ffffff',
+              lightBubbleOut: '#d9fdd3',
+              darkHover: '#2a3942',
+              lightHover: '#f5f6f6'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Custom scrollbars & background pattern */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(120, 144, 156, 0.3);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(120, 144, 156, 0.5);
+    }
+    .wa-bg-pattern {
+      position: relative;
+    }
+    .wa-bg-pattern::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-82d1-d4022201e74a.png');
+      background-repeat: repeat;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .dark .wa-bg-pattern::before {
+      opacity: 0.08;
+    }
+    .light .wa-bg-pattern::before {
+      opacity: 0.4;
+    }
+    .wa-bg-pattern > * {
+      position: relative;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-200 dark:bg-zinc-900 font-sans antialiased selection:bg-wa-teal selection:text-white text-slate-800 dark:text-slate-100 transition-colors duration-200">
+
+  <!-- APP CONTAINER -->
+  <div id="app" class="h-full w-full flex flex-col justify-center items-center overflow-hidden">
+
+    <!-- LOGIN / AUTH MODAL OVERLAY -->
+    <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
+      <div class="bg-white dark:bg-wa-darkHeader w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200 dark:border-slate-700 animate-fade-in">
+        <!-- Header Banner -->
+        <div class="bg-wa-teal px-6 py-8 text-center text-white relative">
+          <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl">
+            <i class="fa-brands fa-whatsapp text-white"></i>
+          </div>
+          <h1 class="text-2xl font-bold">WhatsApp Web</h1>
+          <p class="text-xs text-emerald-100 mt-1">Sign in to start messaging in real-time</p>
+        </div>
+
+        <!-- Auth Form -->
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Your Name</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                <i class="fa-solid fa-user"></i>
+              </span>
+              <input type="text" id="login-name" placeholder="Enter your full name (e.g. Alex)" class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-wa-darkSidebar text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-wa-teal text-sm">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Phone Number</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                <i class="fa-solid fa-phone"></i>
+              </span>
+              <input type="tel" id="login-phone" placeholder="+1 234 567 8900" class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-wa-darkSidebar text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-wa-teal text-sm">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Select Avatar</label>
+            <div class="flex items-center justify-around gap-2" id="avatar-selector">
+              <!-- Avatar options rendered dynamically -->
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">About / Status</label>
+            <input type="text" id="login-about" value="Hey there! I am using WhatsApp." class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-wa-darkSidebar text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-wa-teal text-sm">
+          </div>
+
+          <button id="btn-login" class="w-full bg-wa-teal hover:bg-wa-tealDark text-white font-semibold py-3 rounded-lg shadow-md hover:shadow-lg transition duration-200 flex items-center justify-center gap-2 mt-2">
+            <span>Continue to WhatsApp</span>
+            <i class="fa-solid fa-arrow-right text-sm"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN APP INTERFACE -->
+    <div id="main-app" class="hidden h-full w-full max-w-[1700px] xl:p-3 flex flex-row relative overflow-hidden">
+      <div class="h-full w-full bg-white dark:bg-wa-darkSidebar shadow-2xl rounded-none xl:rounded-xl flex flex-row overflow-hidden border border-slate-200 dark:border-slate-800">
+
+        <!-- LEFT SIDEBAR -->
+        <aside id="sidebar" class="w-full md:w-[380px] lg:w-[420px] flex-shrink-0 flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-wa-darkSidebar z-20 transition-all duration-300">
+
+          <!-- Sidebar Top Bar -->
+          <div class="h-16 px-4 bg-wa-lightBg dark:bg-wa-darkHeader flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
+            <!-- Current User Avatar -->
+            <div class="flex items-center gap-3 cursor-pointer group" id="btn-user-profile">
+              <img id="user-avatar-img" src="" alt="Profile" class="w-10 h-10 rounded-full object-cover ring-2 ring-transparent group-hover:ring-wa-teal transition">
+              <div class="hidden sm:block">
+                <h3 id="user-name-display" class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[120px]">User</h3>
+                <p id="user-status-display" class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[120px]">Online</p>
+              </div>
+            </div>
+
+            <!-- Header Action Icons -->
+            <div class="flex items-center gap-1 sm:gap-2 text-slate-600 dark:text-slate-300">
+              <button id="nav-tab-chats" title="Chats" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-wa-darkHover text-wa-teal">
+                <i class="fa-solid fa-message text-lg"></i>
+              </button>
+              <button id="nav-tab-status" title="Status Stories" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-wa-darkHover relative">
+                <i class="fa-solid fa-circle-notch text-lg"></i>
+                <span id="status-badge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-wa-teal rounded-full ring-2 ring-white dark:ring-wa-darkHeader"></span>
+              </button>
+              <button id="btn-add-contact" title="New Chat" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-wa-darkHover">
+                <i class="fa-solid fa-user-plus text-lg"></i>
+              </button>
+              <button id="btn-settings-toggle" title="Settings" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-wa-darkHover">
+                <i class="fa-solid fa-ellipsis-vertical text-lg"></i>
+              </button>
+              <button id="btn-logout" title="Logout" class="p-2 rounded-full text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30">
+                <i class="fa-solid fa-right-from-bracket text-lg"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- SIDEBAR VIEWS CONTAINER -->
+          <div class="flex-1 flex flex-col overflow-hidden relative">
+
+            <!-- 1. CHATS TAB VIEW -->
+            <div id="view-chats" class="flex-1 flex flex-col overflow-hidden">
+              <!-- Search Bar -->
+              <div class="p-2 bg-white dark:bg-wa-darkSidebar border-b border-slate-100 dark:border-slate-800">
+                <div class="relative flex items-center bg-wa-lightBg dark:bg-wa-darkHeader rounded-lg px-3 py-1.5">
+                  <i class="fa-solid fa-magnifying-glass text-slate-400 text-sm mr-3"></i>
+                  <input type="text" id="search-chats" placeholder="Search or start new chat" class="w-full bg-transparent text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none">
+                </div>
+              </div>
+
+              <!-- Filter Pills -->
+              <div class="px-3 py-2 flex items-center gap-2 overflow-x-auto text-xs font-medium border-b border-slate-100 dark:border-slate-800">
+                <button class="chat-filter-btn active px-3 py-1 rounded-full bg-wa-teal text-white" data-filter="all">All</button>
+                <button class="chat-filter-btn px-3 py-1 rounded-full bg-slate-100 dark:bg-wa-darkHeader text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-wa-darkHover" data-filter="unread">Unread</button>
+                <button class="chat-filter-btn px-3 py-1 rounded-full bg-slate-100 dark:bg-wa-darkHeader text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-wa-darkHover" data-filter="favourites">Favourites</button>
+              </div>
+
+              <!-- Chat List Scrollable -->
+              <div id="chat-list" class="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/50">
+                <!-- Chat items rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- 2. STATUS TAB VIEW -->
+            <div id="view-status" class="hidden flex-1 flex flex-col overflow-y-auto p-4 bg-slate-50 dark:bg-wa-darkSidebar">
+              <h2 class="text-lg font-bold mb-4 text-slate-800 dark:text-white flex items-center justify-between">
+                <span>Status</span>
+                <button id="btn-add-status" class="text-xs bg-wa-teal hover:bg-wa-tealDark text-white px-3 py-1.5 rounded-full flex items-center gap-1">
+                  <i class="fa-solid fa-plus"></i> Add Status
+                </button>
+              </h2>
+
+              <!-- My Status section -->
+              <div id="my-status-card" class="flex items-center gap-3 p-3 bg-white dark:bg-wa-darkHeader rounded-xl shadow-sm cursor-pointer mb-6 border border-slate-200 dark:border-slate-700">
+                <div class="relative">
+                  <img id="my-status-avatar" src="" class="w-12 h-12 rounded-full object-cover">
+                  <div class="absolute bottom-0 right-0 bg-wa-teal text-white w-5 h-5 rounded-full flex items-center justify-center text-xs border-2 border-white dark:border-wa-darkHeader">
+                    <i class="fa-solid fa-plus"></i>
+                  </div>
+                </div>
+                <div class="flex-1">
+                  <h4 class="font-semibold text-sm text-slate-800 dark:text-slate-100">My Status</h4>
+                  <p id="my-status-subtitle" class="text-xs text-slate-500 dark:text-slate-400">Click to add status update</p>
+                </div>
+              </div>
+
+              <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Recent Updates</p>
+              <div id="status-list" class="space-y-2">
+                <!-- Status list items -->
+              </div>
+            </div>
+
+            <!-- 3. SETTINGS & PROFILE VIEW -->
+            <div id="view-settings" class="hidden flex-1 flex flex-col overflow-y-auto p-4 bg-slate-50 dark:bg-wa-darkSidebar">
+              <h2 class="text-lg font-bold mb-4 text-slate-800 dark:text-white">Settings</h2>
+
+              <!-- Profile Card -->
+              <div class="bg-white dark:bg-wa-darkHeader rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700 mb-4 flex items-center gap-4">
+                <img id="settings-avatar-img" src="" class="w-16 h-16 rounded-full object-cover">
+                <div class="flex-1">
+                  <input type="text" id="settings-name-input" class="font-bold text-base bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-slate-600 focus:border-wa-teal text-slate-800 dark:text-slate-100 focus:outline-none w-full">
+                  <input type="text" id="settings-about-input" class="text-xs text-slate-500 dark:text-slate-400 bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-slate-600 focus:border-wa-teal focus:outline-none w-full mt-1">
+                </div>
+                <button id="btn-save-profile" class="p-2 text-wa-teal hover:bg-slate-100 dark:hover:bg-wa-darkHover rounded-full" title="Save Profile">
+                  <i class="fa-solid fa-check text-lg"></i>
+                </button>
+              </div>
+
+              <!-- Appearance Options -->
+              <div class="bg-white dark:bg-wa-darkHeader rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Appearance & Preferences</h3>
+
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-moon text-slate-500 dark:text-slate-400"></i>
+                    <div>
+                      <p class="text-sm font-medium text-slate-800 dark:text-slate-100">Dark Theme</p>
+                      <p class="text-xs text-slate-400">Toggle WhatsApp Dark / Light mode</p>
+                    </div>
+                  </div>
+                  <button id="btn-theme-toggle" class="w-12 h-6 bg-slate-300 dark:bg-wa-teal rounded-full p-1 transition duration-200 flex items-center">
+                    <div id="theme-toggle-dot" class="w-4 h-4 bg-white rounded-full shadow-md transform transition duration-200 dark:translate-x-6"></div>
+                  </button>
+                </div>
+
+                <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-volume-high text-slate-500 dark:text-slate-400"></i>
+                    <div>
+                      <p class="text-sm font-medium text-slate-800 dark:text-slate-100">Message Sounds</p>
+                      <p class="text-xs text-slate-400">Play audio sound on new messages</p>
+                    </div>
+                  </div>
+                  <input type="checkbox" id="setting-sound" checked class="w-4 h-4 accent-wa-teal cursor-pointer">
+                </div>
+
+                <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <label class="block text-sm font-medium text-slate-800 dark:text-slate-100 mb-2">Chat Wallpaper Theme</label>
+                  <div class="grid grid-cols-4 gap-2" id="wallpaper-picker">
+                    <button class="h-10 rounded border-2 border-wa-teal bg-emerald-950/20" data-wall="default" title="Default"></button>
+                    <button class="h-10 rounded border border-slate-300 dark:border-slate-700 bg-slate-900" data-wall="dark" title="Dark Solid"></button>
+                    <button class="h-10 rounded border border-slate-300 dark:border-slate-700 bg-blue-900/30" data-wall="blue" title="Soft Blue"></button>
+                    <button class="h-10 rounded border border-slate-300 dark:border-slate-700 bg-purple-900/30" data-wall="purple" title="Soft Purple"></button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cross Tab Sync Notice -->
+              <div class="mt-4 p-3 bg-teal-50 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800 rounded-xl text-xs text-teal-800 dark:text-teal-200 flex items-start gap-2">
+                <i class="fa-solid fa-circle-info text-wa-teal mt-0.5"></i>
+                <div>
+                  <strong>Real-time Multi-Tab Sync Active:</strong> Open another browser tab/window with a different logged-in user to test real-time cross-tab chat messaging!
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </aside>
+
+        <!-- RIGHT MAIN CHAT WINDOW -->
+        <main id="chat-window" class="flex-1 flex flex-col bg-slate-100 dark:bg-wa-darkChat relative h-full overflow-hidden">
+
+          <!-- NO CHAT SELECTED PLACEHOLDER -->
+          <div id="no-chat-selected" class="flex-1 flex flex-col items-center justify-center p-6 text-center border-b-8 border-wa-teal bg-slate-50 dark:bg-wa-darkHeader">
+            <div class="w-32 h-32 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-6xl text-wa-teal mb-6 shadow-inner animate-pulse">
+              <i class="fa-brands fa-whatsapp"></i>
+            </div>
+            <h2 class="text-2xl font-light text-slate-800 dark:text-slate-100 mb-2">WhatsApp Web for Desktop</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6 leading-relaxed">
+              Send and receive messages without keeping your phone online. Use WhatsApp on up to 4 linked devices and 1 phone at the same time.
+            </p>
+            <div class="flex items-center gap-2 text-xs text-slate-400">
+              <i class="fa-solid fa-lock text-wa-teal"></i> End-to-end encrypted
+            </div>
+          </div>
+
+          <!-- ACTIVE CHAT VIEW CONTAINER -->
+          <div id="active-chat-container" class="hidden flex-1 flex flex-col h-full overflow-hidden">
+
+            <!-- Chat Header -->
+            <header class="h-16 px-4 bg-wa-lightBg dark:bg-wa-darkHeader border-b border-slate-200 dark:border-slate-800 flex items-center justify-between z-10">
+              <div class="flex items-center gap-3 cursor-pointer" id="btn-chat-info">
+                <button id="btn-back-to-chats" class="md:hidden text-slate-600 dark:text-slate-300 pr-1">
+                  <i class="fa-solid fa-arrow-left text-lg"></i>
+                </button>
+                <div class="relative">
+                  <img id="chat-header-avatar" src="" class="w-10 h-10 rounded-full object-cover">
+                  <span id="chat-header-online-dot" class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-wa-darkHeader"></span>
+                </div>
+                <div>
+                  <h3 id="chat-header-name" class="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-tight">Name</h3>
+                  <p id="chat-header-status" class="text-xs text-slate-500 dark:text-slate-400">online</p>
+                </div>
+              </div>
+
+              <!-- Chat Action Buttons -->
+              <div class="flex items-center gap-1 sm:gap-3 text-slate-600 dark:text-slate-300">
+                <button id="btn-audio-call" title="Voice Call" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-wa-darkHover text-slate-600 dark:text-slate-300">
+                  <i class="fa-solid fa-phone"></i>
+                </button>
+                <button id="btn-video-call" title="Video Call" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-wa-darkHover text-slate-600 dark:text-slate-300">
+                  <i class="fa-solid fa-video"></i>
+                </button>
+                <div class="h-5 w-[1px] bg-slate-300 dark:bg-slate-700 mx-1"></div>
+                <button id="btn-search-messages" title="Search Messages" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-wa-darkHover">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+                <div class="relative">
+                  <button id="btn-chat-menu" title="Menu" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-wa-darkHover">
+                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                  </button>
+                  <!-- Chat Dropdown Menu -->
+                  <div id="chat-dropdown-menu" class="hidden absolute right-0 top-10 w-48 bg-white dark:bg-wa-darkHeader rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 py-2 z-50 text-sm">
+                    <button id="menu-opt-clear" class="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-wa-darkHover text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                      <i class="fa-solid fa-broom text-slate-400"></i> Clear Messages
+                    </button>
+                    <button id="menu-opt-pin" class="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-wa-darkHover text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                      <i class="fa-solid fa-thumbtack text-slate-400"></i> Pin Chat
+                    </button>
+                    <button id="menu-opt-delete" class="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-wa-darkHover text-red-500 flex items-center gap-2">
+                      <i class="fa-solid fa-trash"></i> Delete Chat
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </header>
+
+            <!-- Search Messages Bar inside Chat (toggleable) -->
+            <div id="in-chat-search-bar" class="hidden px-4 py-2 bg-slate-200 dark:bg-wa-darkHeader border-b border-slate-300 dark:border-slate-700 flex items-center gap-2">
+              <i class="fa-solid fa-magnifying-glass text-slate-400 text-sm"></i>
+              <input type="text" id="chat-search-input" placeholder="Search in conversation..." class="flex-1 bg-white dark:bg-wa-darkSidebar text-sm text-slate-800 dark:text-white px-3 py-1 rounded border border-slate-300 dark:border-slate-600 focus:outline-none">
+              <button id="btn-close-chat-search" class="text-slate-500 hover:text-slate-800 dark:hover:text-white text-sm px-2">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <!-- Messages Area with Wallpaper Pattern -->
+            <div id="messages-container" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 relative wa-bg-pattern">
+              <!-- Dynamic messages stream -->
+            </div>
+
+            <!-- Typing Indicator Floating -->
+            <div id="typing-indicator" class="hidden px-6 py-1 text-xs text-wa-teal font-medium flex items-center gap-2 bg-slate-100/80 dark:bg-wa-darkChat/80">
+              <span class="flex gap-1">
+                <span class="w-1.5 h-1.5 bg-wa-teal rounded-full animate-bounce"></span>
+                <span class="w-1.5 h-1.5 bg-wa-teal rounded-full animate-bounce delay-100"></span>
+                <span class="w-1.5 h-1.5 bg-wa-teal rounded-full animate-bounce delay-200"></span>
+              </span>
+              <span id="typing-username">Contact</span> is typing...
+            </div>
+
+            <!-- EMOJI PICKER POPUP GRID -->
+            <div id="emoji-picker" class="hidden absolute bottom-20 left-4 z-30 bg-white dark:bg-wa-darkHeader border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl p-3 w-72 h-64 overflow-y-auto grid grid-cols-6 gap-2 text-xl text-center">
+              <!-- Emoji list initialized dynamically -->
+            </div>
+
+            <!-- ATTACHMENT OPTIONS POPUP -->
+            <div id="attachment-menu" class="hidden absolute bottom-20 left-12 z-30 bg-white dark:bg-wa-darkHeader border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-3 space-y-2 text-sm w-48">
+              <label class="flex items-center gap-3 p-2 hover:bg-slate-100 dark:hover:bg-wa-darkHover rounded-xl cursor-pointer text-purple-600 dark:text-purple-400">
+                <i class="fa-solid fa-image text-lg"></i>
+                <span class="text-slate-700 dark:text-slate-200 font-medium">Photos & Videos</span>
+                <input type="file" id="attach-image-input" accept="image/*" class="hidden">
+              </label>
+              <label class="flex items-center gap-3 p-2 hover:bg-slate-100 dark:hover:bg-wa-darkHover rounded-xl cursor-pointer text-blue-600 dark:text-blue-400">
+                <i class="fa-solid fa-file-lines text-lg"></i>
+                <span class="text-slate-700 dark:text-slate-200 font-medium">Document</span>
+                <input type="file" id="attach-doc-input" class="hidden">
+              </label>
+            </div>
+
+            <!-- MESSAGE INPUT BOTTOM BAR -->
+            <footer class="min-h-16 px-4 py-2 bg-wa-lightBg dark:bg-wa-darkHeader border-t border-slate-200 dark:border-slate-800 flex items-end gap-2 z-10">
+              <!-- Emoji Toggle -->
+              <button id="btn-toggle-emoji" title="Emojis" class="p-2 text-slate-500 dark:text-slate-400 hover:text-wa-teal dark:hover:text-wa-teal transition">
+                <i class="fa-regular fa-face-smile text-xl"></i>
+              </button>
+
+              <!-- Attachment Toggle -->
+              <button id="btn-toggle-attach" title="Attach file" class="p-2 text-slate-500 dark:text-slate-400 hover:text-wa-teal dark:hover:text-wa-teal transition">
+                <i class="fa-solid fa-paperclip text-xl"></i>
+              </button>
+
+              <!-- Text Input Field -->
+              <div class="flex-1 bg-white dark:bg-wa-darkSidebar rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center">
+                <textarea id="message-input" rows="1" placeholder="Type a message" class="w-full bg-transparent text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none resize-none max-h-24"></textarea>
+              </div>
+
+              <!-- Voice Recording or Send Button -->
+              <button id="btn-mic-recorder" title="Record Voice Note" class="p-3 bg-wa-teal hover:bg-wa-tealDark text-white rounded-full shadow transition flex items-center justify-center">
+                <i id="mic-icon" class="fa-solid fa-microphone text-base"></i>
+              </button>
+
+              <button id="btn-send-message" title="Send Message" class="p-3 bg-wa-teal hover:bg-wa-tealDark text-white rounded-full shadow transition flex items-center justify-center">
+                <i class="fa-solid fa-paper-plane text-base"></i>
+              </button>
+            </footer>
+
+          </div>
+
+        </main>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODALS CONTAINER -->
+
+  <!-- 1. ADD CONTACT MODAL -->
+  <div id="modal-add-contact" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div class="bg-white dark:bg-wa-darkHeader w-full max-w-sm rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-700">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-slate-800 dark:text-white">New Chat / Add Contact</h3>
+        <button id="btn-close-add-contact" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Contact Name</label>
+          <input type="text" id="new-contact-name" placeholder="e.g. Rahul Sharma" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-wa-darkSidebar text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-wa-teal">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Phone Number</label>
+          <input type="tel" id="new-contact-phone" placeholder="e.g. +91 9876543210" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-wa-darkSidebar text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-wa-teal">
+        </div>
+
+        <button id="btn-save-contact" class="w-full bg-wa-teal hover:bg-wa-tealDark text-white font-semibold py-2.5 rounded-lg transition">
+          Create Chat
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. ADD STATUS MODAL -->
+  <div id="modal-add-status" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div class="bg-white dark:bg-wa-darkHeader w-full max-w-sm rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-700">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-slate-800 dark:text-white">Add Status Update</h3>
+        <button id="btn-close-add-status" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Status Text</label>
+          <textarea id="status-text-input" rows="3" placeholder="What's on your mind?" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-wa-darkSidebar text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-wa-teal"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Or Upload Image</label>
+          <input type="file" id="status-image-input" accept="image/*" class="text-xs text-slate-500 border border-slate-300 dark:border-slate-600 rounded-lg w-full p-2 bg-slate-50 dark:bg-wa-darkSidebar">
+        </div>
+
+        <button id="btn-submit-status" class="w-full bg-wa-teal hover:bg-wa-tealDark text-white font-semibold py-2.5 rounded-lg transition">
+          Post Status
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. STATUS VIEWER FULLSCREEN OVERLAY -->
+  <div id="modal-status-viewer" class="hidden fixed inset-0 z-50 bg-black flex flex-col items-center justify-center">
+    <button id="btn-close-status-viewer" class="absolute top-4 right-4 text-white text-2xl z-20 hover:opacity-80">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+
+    <!-- Timer Progress Bar -->
+    <div class="absolute top-4 left-4 right-16 flex gap-1 z-20" id="status-progress-container">
+      <div class="h-1 bg-white/40 flex-1 rounded overflow-hidden">
+        <div id="status-progress-bar" class="h-full bg-white w-0 transition-all duration-100 ease-linear"></div>
+      </div>
+    </div>
+
+    <!-- Status Author Info -->
+    <div class="absolute top-10 left-4 flex items-center gap-3 z-20 text-white">
+      <img id="status-viewer-avatar" src="" class="w-10 h-10 rounded-full border-2 border-wa-teal object-cover">
+      <div>
+        <p id="status-viewer-author" class="font-bold text-sm">Author Name</p>
+        <p id="status-viewer-time" class="text-xs opacity-75">Today, 10:30 AM</p>
+      </div>
+    </div>
+
+    <!-- Main Content Container -->
+    <div class="w-full h-full flex items-center justify-center p-6 text-center" id="status-viewer-content">
+      <!-- Image or Big Text status -->
+    </div>
+  </div>
+
+  <!-- 4. AUDIO / VIDEO CALL OVERLAY MODAL -->
+  <div id="modal-call" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-between p-8 text-white">
+    <!-- Call Header -->
+    <div class="text-center mt-6">
+      <div class="relative inline-block mb-4">
+        <img id="call-avatar" src="" class="w-24 h-24 rounded-full object-cover border-4 border-wa-teal shadow-2xl">
+        <div class="absolute -bottom-1 -right-1 bg-wa-teal w-7 h-7 rounded-full flex items-center justify-center text-xs">
+          <i id="call-type-icon" class="fa-solid fa-phone"></i>
+        </div>
+      </div>
+      <h3 id="call-user-name" class="text-2xl font-bold mb-1">Contact Name</h3>
+      <p id="call-status" class="text-sm text-emerald-400 font-medium tracking-wide">Ringing...</p>
+      <p id="call-timer" class="text-xs text-slate-400 mt-1">00:00</p>
+    </div>
+
+    <!-- Video Preview Container (for Video calls) -->
+    <div id="call-video-container" class="hidden w-full max-w-xl h-64 bg-slate-900 rounded-2xl relative overflow-hidden border border-slate-700 shadow-2xl">
+      <video id="call-local-video" autoplay playsinline muted class="w-full h-full object-cover"></video>
+      <div class="absolute bottom-3 left-3 bg-black/60 px-2.5 py-1 rounded text-xs">You</div>
+    </div>
+
+    <!-- Call Controls -->
+    <div class="flex items-center gap-6 mb-8">
+      <button id="btn-call-mute" class="w-12 h-12 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-lg text-slate-200 transition">
+        <i class="fa-solid fa-microphone-slash"></i>
+      </button>
+      <button id="btn-call-end" class="w-16 h-16 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center text-2xl text-white shadow-lg shadow-red-600/50 transition transform hover:scale-105">
+        <i class="fa-solid fa-phone-slash"></i>
+      </button>
+      <button id="btn-call-cam" class="w-12 h-12 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-lg text-slate-200 transition">
+        <i class="fa-solid fa-video-slash"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Include App Script -->
+  <script src="app.js"></script>
+</body>
+</html>
