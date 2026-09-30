@@ -60,7 +60,7 @@
   };
 
   on('continue-with-jd', 'click', () => { mode = 'jd'; goTo(2); });
-  on('continue-without-jd', 'click', () => { mode = 'general'; goTo(2); });
+  on('continue-without-jd', 'click', () => { mode = 'general'; const jd = $('jd-text'); if (jd) { jd.value = ''; jd.dispatchEvent(new Event('input')); } goTo(2); });
   on('step2-back', 'click', () => goTo(1));
   on('step2-next', 'click', () => { if (validateResume()) goTo(nextOf(2)); });
   on('step3-back', 'click', () => goTo(2));
