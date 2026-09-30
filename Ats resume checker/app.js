@@ -163,8 +163,29 @@
         split = i;
       }
     }
-    const columns =
-      gap > 120 ? [values.filter(it => it.x < xs[split]), values.filter(it => it.x >= xs[split])] : [values];
+    // Right-aligned dates / tech tags (one short item per header line) also create a big x-gap.
+    // Split into two columns only when the right side is a real text column (aligned line starts,
+    // long lines). Otherwise those dates/tags were cut off and dumped after the whole page.
+    const isRealColumn = group => {
+      const byLine = new Map();
+      group.forEach(it => {
+        const key = Math.round(it.y / 3);
+        const line = byLine.get(key) || { x: Infinity, len: 0 };
+        line.x = Math.min(line.x, it.x);
+        line.len += it.text.trim().length;
+        byLine.set(key, line);
+      });
+      const lines = [...byLine.values()];
+      if (lines.length < 8) {
+        return false;
+      }
+      const common = Math.max(...lines.map(a => lines.filter(b => Math.abs(b.x - a.x) <= 1).length));
+      const avgLen = lines.reduce((n, l) => n + l.len, 0) / lines.length;
+      return common / lines.length >= 0.6 && avgLen >= 35;
+    };
+    const left = gap > 120 ? values.filter(it => it.x < xs[split]) : [],
+      right = gap > 120 ? values.filter(it => it.x >= xs[split]) : [];
+    const columns = gap > 120 && isRealColumn(right) ? [left, right] : [values];
     return columns
       .map(column => {
         column.sort((a, b) => b.y - a.y || a.x - b.x);
