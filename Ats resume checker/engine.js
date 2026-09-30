@@ -1,119 +1,16 @@
 /* Pure resume logic (no DOM). Browser: window.ATS. Node: require('./engine'). */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) {
-    module.exports = factory();
+    module.exports = factory(typeof globalThis !== "undefined" ? globalThis : this);
   } else {
-    root.ATS = factory();
+    root.ATS = factory(root);
   }
-})(typeof self !== "undefined" ? self : this, function () {
+})(typeof self !== "undefined" ? self : this, function (root) {
   // ============================================================
   // KEYWORDS
   // ============================================================
 
-  const KEYWORDS = [
-    "javascript",
-    "react",
-    "node",
-    "express",
-    "mongodb",
-    "mysql",
-    "java",
-    "spring",
-    "spring boot",
-    "hibernate",
-    "junit",
-    "maven",
-    "flask",
-    "python",
-    "django",
-    "html",
-    "css",
-    "git",
-    "github",
-    "docker",
-    "aws",
-    "kubernetes",
-    "typescript",
-    "c++",
-    "sql",
-    "php",
-    "laravel",
-    "angular",
-    "vue",
-    "next.js",
-    "nextjs",
-    "scrum",
-    "agile",
-    "jira",
-    "android",
-    "ios",
-    "swift",
-    "kotlin",
-    "devops",
-    "ci/cd",
-    "machine learning",
-    "c#",
-    ".net",
-    "dotnet",
-    "postgresql",
-    "redis",
-    "firebase",
-    "graphql",
-    "tailwind",
-    "bootstrap",
-    "jquery",
-    "redux",
-    "figma",
-    "terraform",
-    "azure",
-    "gcp",
-    "linux",
-    "project management",
-    "salesforce",
-    "excel",
-    "sql server",
-    "nosql",
-    "microservices",
-    "html5",
-    "css3",
-    "sass",
-    "webpack",
-    "jenkins",
-    "ansible",
-
-    // Additional common data/AI skills
-    "pandas",
-    "numpy",
-    "scikit-learn",
-    "sklearn",
-    "matplotlib",
-    "seaborn",
-    "tensorflow",
-    "pytorch",
-    "keras",
-    "opencv",
-    "power bi",
-    "tableau",
-
-    // AI/ML terms that previously only surfaced (unreliably) via signal-phrase
-    // or capitalized-word detection. "js" is deliberately NOT added as a bare
-    // alias: resumes that list project files (app.js, engine.js) would match
-    // "\bjs\b" on the file extension itself, since a preceding "." still
-    // counts as a word boundary. "javascript" (already above) still matches.
-    "artificial intelligence",
-    "nlp",
-    "llm",
-    "rag",
-    "langchain",
-    "hugging face",
-    "fastapi",
-    "openai",
-    "generative ai",
-    "prompt engineering",
-    "vector database",
-    "rest api",
-    "api",
-  ];
+  const KEYWORDS = typeof require === "function" ? require("./skills-data.js") : (root.ATS_SKILLS || []);
 
   // ============================================================
   // STOP WORDS
@@ -216,7 +113,7 @@
       .replace(/>/g, "&gt;");
 
   const bounds = (k) => [
-    /^[a-z0-9]/i.test(k) ? "\\b" : "(?<![a-z0-9])",
+    /^[a-z0-9]/i.test(k) ? "\\b" : "(^|[^a-z0-9])",
     /[a-z0-9]$/i.test(k) ? "\\b" : "(?![a-z0-9])",
   ];
 
@@ -387,10 +284,20 @@
     // 1. Detect predefined technical keywords
     // ----------------------------------------------------------
 
+    const JD_STOPLIST = new Set([
+      "amazon", "google", "microsoft", "apple", "meta", "accenture",
+      "new york", "san francisco", "london", "india",
+    ]);
+    const capitalizedMention = (keyword) => {
+      const variants = [keyword, ...(VARIANTS.get(keyword) || [])];
+      return variants.some((variant) => {
+        const words = variant.split(" ");
+        const titled = words.map((word) => word ? word[0].toUpperCase() + word.slice(1) : word).join(" ");
+        return !JD_STOPLIST.has(norm(variant)) && new RegExp(`(^|[^a-z0-9])${esc(titled)}(?![a-z0-9])`).test(source);
+      });
+    };
     KEYWORDS.forEach((keyword) => {
-      if (pattern(keyword).test(source)) {
-        add(keyword);
-      }
+      if (capitalizedMention(keyword)) add(keyword);
     });
 
     // ----------------------------------------------------------
@@ -487,7 +394,7 @@
     });
 
     Object.keys(freq).forEach((k) => {
-      if (freq[k] >= 2) {
+      if (freq[k] >= 2 && !JD_STOPLIST.has(k)) {
         add(k);
       }
     });
@@ -532,8 +439,13 @@
     });
 
     const result = candidates.filter((k) => !drop.has(k));
-
-    return result.slice(0, 40);
+    const ranked = result.map((keyword, index) => {
+      const escaped = esc(keyword);
+      const mentions = (source.match(new RegExp(`(?:^|[^a-z0-9])${escaped}(?![a-z0-9])`, "gi")) || []).length;
+      const required = new RegExp(`(?:must|required|essential|mandatory|need to)[^.;\n]{0,80}${escaped}`, "i").test(source) ? 1 : 0;
+      return { keyword, index, priority: required * 100 + Math.min(mentions, 10) };
+    });
+    return ranked.sort((a, b) => b.priority - a.priority || a.index - b.index).map((item) => item.keyword);
   }
 
   // ============================================================
@@ -568,8 +480,15 @@
   const EMAIL_RE =
     /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 
-  const PHONE_RE =
-    /(?<!\d)\d{5}[\s-]?\d{5}(?!\d)|\+\d[\d\s().-]{8,}\d/;
+  const PHONE_RE = /(?:\+?\d[\d ().-]{7,}\d)/g;
+  function hasPhone(value) {
+    return [...String(value ?? "").matchAll(PHONE_RE)].some(([raw]) => {
+      const digits = raw.replace(/\D/g, "");
+      if (digits.length < 10 || digits.length > 15) return false;
+      if (/^\d{4}\s*[-–—]\s*\d{4}$/.test(raw.trim())) return false;
+      return true;
+    });
+  }
 
   // ============================================================
   // RESUME SECTIONS
@@ -583,7 +502,7 @@
 
     [
       "skills",
-      /^(?:(?:technical|core|key|relevant)\s+)?(?:skills(?:\s*(?:&|and)\s*(?:tools?|technologies|technology))?|competenc(?:y|ies)|technologies|proficiencies|technical proficiencies|tools)$/i,
+      /^(?:(?:technical|core|key|relevant)\s+)?(?:skills(?:\s*(?:&|and)\s*(?:tools?|technologies|technology))?|competenc(?:y|ies)|technologies|proficiencies|technical proficiencies|technical expertise|core competencies|areas of expertise|tools)$/i,
     ],
 
     [
@@ -608,7 +527,7 @@
 
     [
       "other",
-      /^(?:achievements?|awards?|languages?|interests?|hobbies|extracurriculars?|volunteering|additional information)$/i,
+      /^(?:achievements?|awards?|languages?|interests?|hobbies|extracurriculars?|volunteering|additional information|publications?|research|conferences?)$/i,
     ],
   ];
 
@@ -619,6 +538,7 @@
     projects: "Projects",
     education: "Education",
     certifications: "Certifications",
+    other: "Other",
   };
 
   function detectSection(line) {
@@ -709,21 +629,31 @@
     // so it is not mistaken for a new title/bullet.
     const t = [];
     let inBullet = false;
+    let lastNonEmptyIndex = -1;
+    let prev = "";
     lines.forEach((raw) => {
       const line = String(raw ?? "").trim();
       if (!line) return void t.push("");
-      const prev = t.filter(Boolean).pop() || "";
       const wrappedTail =
         inBullet && !isBullet(line) && !DETAIL_RE.test(line) &&
         (!/[.!?]$/.test(prev) || /^[a-z]/.test(line)) &&
         !(/^[A-Z]/.test(line) && /\b(?:19|20)\d{2}\b/.test(line));
-      if (wrappedTail) {
-        t[t.lastIndexOf(prev)] = prev + " " + line;
+      if (wrappedTail && lastNonEmptyIndex >= 0) {
+        t[lastNonEmptyIndex] = prev + " " + line;
+        prev = t[lastNonEmptyIndex];
       } else {
         t.push(line);
+        lastNonEmptyIndex = t.length - 1;
+        prev = line;
         inBullet = isBullet(line);
       }
     });
+    const nextNonEmpty = new Array(t.length);
+    let next = "";
+    for (let i = t.length - 1; i >= 0; i--) {
+      nextNonEmpty[i] = next;
+      if (t[i]) next = t[i];
+    }
 
     const blocks = [];
     let cur = null;
@@ -745,7 +675,7 @@
       // produced it. Without this, a bare "Mehta AI" (no separators at
       // all) followed by "- did X" silently merges into whatever block
       // came before it instead of starting its own.
-      const nextLine = t.slice(i + 1).find(Boolean);
+      const nextLine = nextNonEmpty[i];
 
       const isBareTitleBeforeBullets =
         !DETAIL_RE.test(line) &&
@@ -891,8 +821,7 @@
       (item) => score(item, keywords) > 0,
     );
 
-    const finalItems =
-      kept.length > 0 ? kept : items;
+    const finalItems = [...items].sort((a, b) => score(b, keywords) - score(a, keywords));
 
     return match
       ? `${match[1]}: ${finalItems.join(", ")}`
@@ -955,41 +884,24 @@
     }
 
     const alternatives = [...keywords]
+      .flatMap((keyword) => [canonicalize(keyword), ...(VARIANTS.get(canonicalize(keyword)) || [])])
+      .map(norm)
+      .filter((value, index, all) => all.indexOf(value) === index)
       .sort((a, b) => b.length - a.length)
-      .map((keyword) => {
-        const [left, right] = bounds(keyword);
-
-        return (
-          left +
-          esc(keyword) +
-          right
-        );
-      })
+      .map(esc)
       .join("|");
-
-    const regex = new RegExp(
-      alternatives,
-      "gi",
-    );
+    const regex = new RegExp(`(^|[^a-z0-9])(?:${alternatives})(?![a-z0-9])`, "gi");
 
     let output = "";
     let lastIndex = 0;
     let match;
 
     while ((match = regex.exec(text))) {
-      output +=
-        escHtml(
-          text.slice(
-            lastIndex,
-            match.index,
-          ),
-        ) +
-        `<mark class="kw-hit">${escHtml(
-          match[0],
-        )}</mark>`;
-
-      lastIndex =
-        match.index + match[0].length;
+      const prefix = match[1] || "";
+      const start = match.index + prefix.length;
+      output += escHtml(text.slice(lastIndex, start)) +
+        `<mark class="kw-hit">${escHtml(match[0].slice(prefix.length))}</mark>`;
+      lastIndex = match.index + match[0].length;
     }
 
     return (
@@ -1007,7 +919,7 @@
     keywords,
     {
       highlight: enableHighlight = true,
-      jdOnly = true,
+      jdOnly = false,
     } = {},
   ) {
     const H = (text) =>
@@ -1162,7 +1074,7 @@
   function renderText(
     sections,
     keywords,
-    { jdOnly = true } = {},
+    { jdOnly = false } = {},
   ) {
     const output = [];
 
@@ -1298,7 +1210,7 @@
     "participated", "participate", "participating",
   ];
 
-  const VERBS = new RegExp(`\\b(?:${VERB_WORDS.join("|")})\\b`, "gi");
+  const VERB_START = new RegExp(`^(?:${VERB_WORDS.join("|")})\\b`, "i");
 
   // ============================================================
   // RESUME ANALYSIS
@@ -1316,7 +1228,7 @@
     const checks = {
       contact:
         EMAIL_RE.test(resume) ||
-        PHONE_RE.test(resume),
+        hasPhone(resume),
 
       experience:
         keys.has("experience"),
@@ -1333,7 +1245,7 @@
         .length;
     const words = resume.split(/\s+/).filter(Boolean).length;
     const bullets = resume.split("\n").filter(isBullet).length;
-    const verbs = (resume.match(VERBS) || []).length;
+    const verbs = resume.split(/\n/).filter(isBullet).reduce((count, line) => count + (VERB_START.test(stripBullets(line)) ? 1 : 0), 0);
     // The original only caught %, currency and "Nx" multipliers, so bullets
     // like "500+ users", "cut runtime from 8s to 2s", or "12 team members"
     // scored zero measurable results despite clearly having numbers. This
@@ -1405,6 +1317,8 @@
         mode: "jd",
 
         score: Math.round(weightedCoverage * 60 + structureCoverage * 25 + contentSignals * 15),
+        jobMatch: Math.round(weightedCoverage * 100),
+        atsReadiness: Math.round((structureCoverage * 0.6 + contentSignals * 0.4) * 100),
         scoreBreakdown,
         methodology: "Estimate: 60% JD keyword coverage (full credit when a keyword is demonstrated in Experience/Projects/Summary, half credit when it only appears in the Skills list), 25% resume structure checks, 15% content signals (bullets, action verbs, measurable results). Not a prediction of recruiter or ATS decisions.",
 
@@ -1505,6 +1419,8 @@
       mode: "general",
 
       score: total,
+      jobMatch: null,
+      atsReadiness: total,
       scoreBreakdown: {
         "structure checks": Math.round((passed / 4) * 100),
         "length": Math.round((okLen ? 1 : words > 0 ? 0.5 : 0) * 100),
@@ -1558,5 +1474,6 @@
     isBullet,
 
     PHONE_RE,
+    hasPhone,
   };
 });
