@@ -3,12 +3,8 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ATS Tracker Pro</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap">
 <link rel="stylesheet" href="tailwind.generated.css">
 <link rel="stylesheet" href="styles.css">
-<script src="assets/vendor/pdf.min.js" defer></script>
-<script src="assets/vendor/mammoth.browser.min.js" defer></script>
 </head>
 
 <body class="bg-slate-950 text-slate-100 min-h-screen">
@@ -24,22 +20,6 @@
     <a href="#top" class="side-nav-item is-active">
       <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" fill="currentColor" aria-hidden="true"><path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M14 3v5h5M8 12h8M8 15h8M8 18h5" stroke="#0f172a" stroke-width="1.5" fill="none"/></svg>
       <span><span class="block">Analyzer</span><span class="side-nav-sub">Check your match score</span></span>
-    </a>
-    <a href="#" title="Coming soon" aria-disabled="true" class="side-nav-item">
-      <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" fill="currentColor" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9.5Z"/><path d="M9 10h6v2H9z" fill="#0f172a"/></svg>
-      <span><span class="block">Resume Builder</span><span class="side-nav-sub">Create professional resume</span></span>
-    </a>
-    <a href="#" title="Coming soon" aria-disabled="true" class="side-nav-item">
-      <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" fill="currentColor" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2h-2V5h-4v2H8Zm-5 4h18v3h-7v-1h-4v1H3v-3Z"/></svg>
-      <span><span class="block">Job Tracker</span><span class="side-nav-sub">Track your applications</span></span>
-    </a>
-    <a href="#" title="Coming soon" aria-disabled="true" class="side-nav-item">
-      <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span><span class="block">History</span><span class="side-nav-sub">View past analysis</span></span>
-    </a>
-    <a href="#" title="Coming soon" aria-disabled="true" class="side-nav-item">
-      <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" fill="currentColor" aria-hidden="true"><path d="m19.4 13.5 1.1.9-1.8 3.1-1.3-.5a7.7 7.7 0 0 1-1.8 1l-.2 1.4h-3.6l-.2-1.4a7.7 7.7 0 0 1-1.8-1l-1.3.5-1.8-3.1 1.1-.9a7 7 0 0 1 0-2.1l-1.1-.9 1.8-3.1 1.3.5a7.7 7.7 0 0 1 1.8-1l.2-1.4h3.6l.2 1.4a7.7 7.7 0 0 1 1.8 1l1.3-.5 1.8 3.1-1.1.9a7 7 0 0 1 0 2.1ZM13.6 15a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
-      <span><span class="block">Settings</span><span class="side-nav-sub">Preferences &amp; more</span></span>
     </a>
   </nav>
 
@@ -63,11 +43,7 @@
       </div>
 
       <nav class="hidden md:flex items-center gap-7 text-sm font-medium mx-auto" aria-label="Primary">
-        <a href="#" title="Coming soon" aria-disabled="true" class="text-slate-400 hover:text-slate-200 transition-colors">Home</a>
         <a href="#top" class="text-violet-300 border-b-2 border-violet-400 pb-1">Analyzer</a>
-        <a href="#" title="Coming soon" aria-disabled="true" class="text-slate-400 hover:text-slate-200 transition-colors">Resume Builder</a>
-        <a href="#" title="Coming soon" aria-disabled="true" class="text-slate-400 hover:text-slate-200 transition-colors">Job Tracker</a>
-        <a href="#" title="Coming soon" aria-disabled="true" class="text-slate-400 hover:text-slate-200 transition-colors">History</a>
       </nav>
 
       <div class="flex items-center gap-2.5">
@@ -92,10 +68,10 @@
         <section id="hero" class="space-y-5">
           <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-300 bg-violet-500/10 border border-violet-500/30 px-3 py-1.5 rounded-full">
             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 5.6L19 9.5l-5.2 1.9L12 17l-1.8-5.6L5 9.5l5.2-1.9L12 2Z"/></svg>
-            AI-Powered Resume Analysis
+            Browser Resume Analysis
           </span>
           <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">Find Your <span class="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">Perfect Match</span></h1>
-          <p class="text-slate-400 max-w-2xl">Analyze your resume against job descriptions, get ATS scores, find missing keywords and improve your chances of getting hired.</p>
+          <p class="text-slate-400 max-w-2xl">Analyze your resume against job descriptions, get transparent keyword coverage and structure feedback to improve your resume.</p>
 
           <div class="flex flex-wrap gap-x-6 gap-y-3 pt-1">
             <div class="flex items-center gap-2 text-sm text-slate-300"><span class="feature-dot"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor" aria-hidden="true"><path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/></svg></span>ATS-friendly Analysis</div>
@@ -212,7 +188,7 @@
 
           <section id="job-section" class="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <div class="flex justify-between mb-1">
-              <label for="jd-text" class="text-sm font-semibold text-slate-300">Job description <span class="font-normal text-slate-400">(optional)</span></label>
+              <label for="jd-text" class="text-sm font-semibold text-slate-300">Job description <span class="font-normal text-slate-400">for best results</span></label>
               <span id="jd-count" class="text-xs text-slate-400">0 words</span>
             </div>
             <textarea id="jd-text" class="field h-40" placeholder="Without a JD you get a general ATS score, and tailoring only applies the template."></textarea>
@@ -265,6 +241,12 @@
               </div>
             </div>
 
+            <div class="text-xs text-slate-400 space-y-1">
+              <p id="score-method"></p>
+              <p id="score-breakdown"></p>
+              <p id="job-match-score"></p>
+              <p id="ats-readiness-score"></p>
+            </div>
             <ul class="grid sm:grid-cols-2 gap-2 text-xs">
               <li class="flex justify-between bg-slate-950 p-2.5 rounded border border-slate-800"><span>Contact details (email/phone)</span><span id="chk-contact"></span></li>
               <li class="flex justify-between bg-slate-950 p-2.5 rounded border border-slate-800"><span>Experience / internship section</span><span id="chk-experience"></span></li>
@@ -291,7 +273,7 @@
               <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 mr-auto">Tailored resume preview</h3>
               <div id="template-picker"></div>
               <label class="flex items-center gap-1.5"><input type="checkbox" id="highlight-toggle" class="accent-violet-500" checked> Highlight keywords</label>
-              <label class="flex items-center gap-1.5"><input type="checkbox" id="jd-only-toggle" class="accent-violet-500" checked> Only JD-relevant lines</label>
+              <label class="flex items-center gap-1.5"><input type="checkbox" id="jd-only-toggle" class="accent-violet-500"> Only JD-relevant lines</label>
 
               <div class="flex gap-2">
                 <button id="print-btn" type="button" class="bg-violet-600 hover:bg-violet-500 px-3 py-1.5 rounded-lg">Print / Save as PDF</button>
@@ -312,7 +294,7 @@
       <aside class="space-y-6">
         <div id="video-guide" class="bg-slate-900 border border-slate-800 rounded-xl p-4">
           <p class="text-sm font-bold mb-3">Product preview</p>
-          <video class="w-full aspect-video rounded-lg border border-slate-800 bg-black" controls muted loop playsinline preload="metadata" controlslist="nodownload nofullscreen noremoteplayback noplaybackrate" disablepictureinpicture>
+          <video class="w-full aspect-video rounded-lg border border-slate-800 bg-black" controls muted loop playsinline preload="none" loading="lazy" controlslist="nodownload nofullscreen noremoteplayback noplaybackrate" disablepictureinpicture>
             <source src="assets/DESHboardats.mp4.mp4" type="video/mp4">
             Your browser does not support the video tag.
           </video>
@@ -338,7 +320,7 @@
           <p class="text-sm font-bold mb-3">Why Choose ATS Tracker Pro?</p>
           <ul class="space-y-2.5 text-sm text-slate-300">
             <li class="flex items-start gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" fill="currentColor" aria-hidden="true"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z"/></svg>100% Private &amp; Secure (No data leaves your browser)</li>
-            <li class="flex items-start gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" fill="currentColor" aria-hidden="true"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z"/></svg>Accurate ATS matching against real job descriptions</li>
+            <li class="flex items-start gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" fill="currentColor" aria-hidden="true"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z"/></svg>Transparent keyword and structure estimates</li>
             <li class="flex items-start gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" fill="currentColor" aria-hidden="true"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z"/></svg>Practical resume improvement suggestions</li>
             <li class="flex items-start gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" fill="currentColor" aria-hidden="true"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z"/></svg>Supports PDF, DOCX and TXT uploads</li>
             <li class="flex items-start gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" fill="currentColor" aria-hidden="true"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z"/></svg>Simple, clean and easy to use</li>
@@ -352,6 +334,7 @@
   <footer class="border-t border-slate-800 py-4 text-center text-xs text-slate-400">&copy; 2026 ATS Tracker Pro</footer>
 </div>
 
+<script src="skills-data.js"></script>
 <script src="resume-templates/selector.js"></script>
 <script src="engine.js"></script>
 <script src="app.js"></script>
