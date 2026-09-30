@@ -6,6 +6,7 @@
   "scripts": {
     "build": "npm run build:css",
     "build:css": "tailwindcss -i ./tailwind.input.css -o './Ats resume checker/tailwind.generated.css' --content './Ats resume checker/index.html' './Ats resume checker/**/*.js' --minify",
+    "test": "node --test test/*.test.js",
     "check": "node --check 'Ats resume checker/app.js' && node --check 'Ats resume checker/engine.js' && node --check 'Ats resume checker/stepper.js'"
   },
   "devDependencies": {
