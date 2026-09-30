@@ -21,9 +21,23 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; media-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+          "value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; media-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
         }
       ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/assets/vendor/(.*)",
+      "destination": "/Ats resume checker/assets/vendor/$1"
+    },
+    {
+      "source": "/resume-templates/(.*)",
+      "destination": "/Ats resume checker/resume-templates/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/Ats resume checker/$1"
     }
   ]
 }
