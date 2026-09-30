@@ -1,5 +1,41 @@
+# Dependencies
 node_modules/
+
+# Build outputs
+*.generated.css
+*.min.css
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Logs
 *.log
-.vercel/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test coverage
 coverage/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Vercel
+.vercel
+
+# Tailwind cache
+.tailwind-cache/
+
+# Distribution
+dist/
+build/
