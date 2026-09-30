@@ -1,0 +1,44 @@
+{
+  "env": {
+    "browser": true,
+    "es2022": true,
+    "node": true
+  },
+  "globals": {
+    "ATS": "readonly",
+    "ResumeTemplates": "readonly",
+    "ATS_SKILLS": "readonly",
+    "ATSApp": "writable"
+  },
+  "extends": [
+    "eslint:recommended"
+  ],
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "script"
+  },
+  "rules": {
+    "indent": ["error", 2],
+    "linebreak-style": ["error", "unix"],
+    "quotes": ["error", "single"],
+    "semi": ["error", "always"],
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "no-console": "off",
+    "eqeqeq": ["error", "always"],
+    "curly": ["error", "all"],
+    "no-var": "error",
+    "prefer-const": "error",
+    "no-trailing-spaces": "error",
+    "max-len": ["warn", { "code": 120 }],
+    "no-useless-escape": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.js"],
+      "env": {
+        "node": true,
+        "jest": true
+      }
+    }
+  ]
+}
