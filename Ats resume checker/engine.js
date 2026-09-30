@@ -1008,28 +1008,21 @@
         splitBlocks(section.lines).forEach(
           (block) => {
             block.header
-              .map((header) =>
-                header.trim(),
-              )
+              .map((header) => header.trim())
               .filter(Boolean)
               .forEach((header) => {
-                const {
-                  title,
-                  date,
-                } = splitHeader(header);
-
+                const { title, date } = splitHeader(header);
+                // PDF/DOCX extraction can place a date on its own line. Do
+                // not create an empty flex title that pushes the date to the
+                // far right; preserve it as readable full-width metadata.
+                if (!title && date) {
+                  html += `<div class="cv-block-date-only">${escHtml(date)}</div>`;
+                  return;
+                }
                 html +=
                   `<div class="cv-block-header-row">` +
-                  `<span class="cv-block-title">${H(
-                    title,
-                  )}</span>` +
-                  `${
-                    date
-                      ? `<span class="cv-block-date">${escHtml(
-                          date,
-                        )}</span>`
-                      : ""
-                  }` +
+                  `<span class="cv-block-title">${H(title)}</span>` +
+                  `${date ? `<span class="cv-block-date">${escHtml(date)}</span>` : ""}` +
                   `</div>`;
               });
 
