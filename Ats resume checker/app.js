@@ -7,19 +7,34 @@
   const MAX_EXTRACTED_CHARS = 120000;
   const MIN_RESUME_WORDS = 10;
   const MIN_JD_WORDS = 8;
+  const scriptCache = new Map();
+  const loadScript = (src, globalName) => {
+    if (window[globalName]) return Promise.resolve(window[globalName]);
+    if (!scriptCache.has(src)) scriptCache.set(src, new Promise((resolve, reject) => {
+      const script = document.createElement('script'); script.src = src; script.async = true;
+      script.onload = () => window[globalName] ? resolve(window[globalName]) : reject(new Error(`${globalName} unavailable`));
+      script.onerror = () => reject(new Error(`Could not load ${globalName}`));
+      document.head.append(script);
+    }));
+    return scriptCache.get(src);
+  };
 
   const words = (s) => s.trim().split(/\s+/).filter(Boolean).length;
   [['resume-text', 'resume-count'], ['jd-text', 'jd-count']].forEach(([i, o]) => {
-    const f = () => ($(o).textContent = words($(i).value) + ' words');
+    const f = () => { $(o).textContent = words($(i).value) + ' words'; resetResults(); };
     $(i).addEventListener('input', f); f();
   });
   const showError = (m) => { $('form-error').textContent = m; $('form-error').classList.remove('hidden'); };
   const hideError = () => $('form-error').classList.add('hidden');
-
-  // ---- "coming soon" nav placeholders: href="#" would otherwise jump/scroll the page ----
-  document.querySelectorAll('[title="Coming soon"]').forEach((el) => {
-    el.addEventListener('click', (e) => e.preventDefault());
-  });
+  const setText = (id, value) => { const el = $(id); if (el) el.textContent = value; };
+  function resetResults() {
+    tailored = null;
+    $('analysis-result').classList.add('hidden');
+    $('placeholder-result').classList.remove('hidden');
+    $('tailored-section').classList.add('hidden');
+    $('resume-page').replaceChildren();
+    $('tailored-output').value = '';
+  }
 
   // ---- upload ----
   const input = $('file-input');
@@ -59,23 +74,40 @@
       $('resume-text').value = safeText; $('resume-text').dispatchEvent(new Event('input'));
       $('upload-status').textContent = 'Loaded: ' + file.name;
     } catch (err) {
-      console.error(err);
-      fail(ext === 'pdf' ? 'Could not read this PDF (password-protected or scanned image?). Paste the text instead.' : 'Could not read this file. Paste the text instead.');
+      const reason = String(err && err.message || '').toLowerCase();
+      const message = reason.includes('too many') ? 'This PDF has too many pages (maximum 15).' :
+        reason.includes('too large') ? 'The extracted text is too large to process safely. Please paste a shorter resume.' :
+        reason.includes('password') ? 'This PDF is password-protected. Paste the resume text instead.' :
+        reason.includes('no extractable') ? 'No selectable text was found. This may be a scanned PDF; paste the text instead.' :
+        `Could not read this ${ext.toUpperCase()} file. Paste the text instead.`;
+      fail(message);
     }
   }
   function fail(msg) { $('upload-status').textContent = ''; input.value = ''; showError(msg); }
 
+  function pageText(items) {
+    const values = items.map((it) => ({ text: String(it.str || ''), x: it.transform[4], y: it.transform[5] })).filter((it) => it.text);
+    if (!values.length) return '';
+    const xs = [...new Set(values.map((it) => Math.round(it.x)))].sort((x, y) => x - y);
+    let split = -1, gap = 0;
+    for (let i = 1; i < xs.length; i++) if (xs[i] - xs[i - 1] > gap) { gap = xs[i] - xs[i - 1]; split = i; }
+    const columns = gap > 120 ? [values.filter((it) => it.x < xs[split]), values.filter((it) => it.x >= xs[split])] : [values];
+    return columns.map((column) => {
+      column.sort((a, b) => b.y - a.y || a.x - b.x);
+      let out = '', lastY = null;
+      column.forEach((it) => { if (lastY !== null) out += Math.abs(it.y - lastY) > 2 ? '\n' : ' '; out += it.text; lastY = it.y; });
+      return out;
+    }).join('\n');
+  }
   async function readPdf(buf) {
-    if (!window.pdfjsLib) throw new Error('PDF engine not loaded');
+    const pdfjsLib = await loadScript('assets/vendor/pdf.min.js', 'pdfjsLib');
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.js';
     const pdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise; // CVE-2024-4367 mitigation
     if (pdf.numPages > MAX_PDF_PAGES) { pdf.destroy(); throw new Error('Too many PDF pages'); }
     let text = '';
     for (let i = 1; i <= pdf.numPages; i++) {
       const content = await (await pdf.getPage(i)).getTextContent();
-      let lastY = null;
-      content.items.forEach((it) => { const y = it.transform[5]; if (lastY !== null) text += Math.abs(y - lastY) > 2 ? '\n' : ' '; text += it.str; lastY = y; });
-      text += '\n';
+      text += pageText(content.items) + '\n';
       if (text.length > MAX_EXTRACTED_CHARS) { pdf.destroy(); throw new Error('Extracted text is too large'); }
     }
     pdf.destroy();
@@ -83,12 +115,15 @@
     return text;
   }
   async function readDocx(buf) {
-    if (!window.mammoth) throw new Error('DOCX engine not loaded');
+    const mammoth = await loadScript('assets/vendor/mammoth.browser.min.js', 'mammoth');
     const { value } = await mammoth.convertToHtml({ arrayBuffer: buf });
-    const body = new DOMParser().parseFromString(value, 'text/html').body; // inert parse, no innerHTML on live DOM
-    const text = [...body.children].flatMap((el) => /^(UL|OL)$/.test(el.tagName)
-      ? [...el.querySelectorAll(':scope > li')].map((li) => '• ' + li.textContent.trim())
-      : [el.textContent.trim()]).filter(Boolean).join('\n');
+    const body = new DOMParser().parseFromString(value, 'text/html').body;
+    const extract = (el) => {
+      if (/^(UL|OL)$/.test(el.tagName)) return [...el.children].map((li) => '• ' + li.textContent.trim());
+      if (el.tagName === 'TABLE') return [...el.rows].map((row) => [...row.cells].map((cell) => cell.textContent.trim()).filter(Boolean).join(' | '));
+      return [el.textContent.trim()];
+    };
+    const text = [...body.children].flatMap(extract).filter(Boolean).join('\n');
     if (text.length > MAX_EXTRACTED_CHARS) throw new Error('Extracted text is too large');
     return text;
   }
@@ -113,6 +148,8 @@
     $('placeholder-result').classList.add('hidden'); $('analysis-result').classList.remove('hidden');
     const c = $('score-circle'); c.style.strokeDashoffset = 377 - (377 * s) / 100; c.setAttribute('stroke', color);
     $('score-text').textContent = s + '%'; $('score-status').textContent = status; $('score-status').style.color = color;
+    setText('job-match-score', r.mode === 'jd' ? `Job Match: ${r.jobMatch}%` : 'Job Match: —');
+    setText('ats-readiness-score', `ATS Readiness: ${r.atsReadiness}%`);
     const jdMode = r.mode === 'jd';
     $('mode-badge').textContent = jdMode ? 'JD keyword match estimate' : 'General resume-quality estimate';
     $('matched-label').textContent = jdMode ? 'Matched keywords' : 'Skills detected';
@@ -122,9 +159,9 @@
     tags($('missing-tags'), r.missing, 'tag-missing', r.noKeywords ? 'No usable keywords found in this JD; no keyword points awarded.' : 'Nothing missing');
     Object.entries(r.checks).forEach(([k, ok]) => { const e = $('chk-' + k); e.textContent = ok ? '✓ Found' : '✗ Missing'; e.className = ok ? 'text-emerald-400' : 'text-rose-400'; });
     const breakdown = r.scoreBreakdown || {};
-    $('score-method').textContent = (r.methodology || 'Weighted estimate based on keyword coverage and resume structure.') +
-      (r.lowRelevance ? ' ⚠ Keyword overlap with this JD is very low — this score reflects resume quality, not job fit.' : '');
-    $('score-breakdown').textContent = Object.entries(breakdown).map(([k, v]) => `${k}: ${v}%`).join(' · ');
+    setText('score-method', (r.methodology || 'Weighted estimate based on keyword coverage and resume structure.') +
+      (r.lowRelevance ? ' ⚠ Keyword overlap with this JD is very low — this score reflects resume quality, not job fit.' : ''));
+    setText('score-breakdown', Object.entries(breakdown).map(([k, v]) => `${k}: ${v}%`).join(' · '));
   }
 
   // ---- tailor + preview ----
@@ -178,10 +215,12 @@
   // ---- export ----
   function flash(btn, msg) { const o = btn.textContent; btn.textContent = msg; setTimeout(() => (btn.textContent = o), 1500); }
   $('copy-btn').addEventListener('click', async (e) => {
+    if (!confirmLossyExport()) return;
     try { await navigator.clipboard.writeText($('tailored-output').value); flash(e.target, 'Copied!'); }
     catch { showError('Clipboard blocked by the browser. Use the .txt download instead.'); }
   });
   $('download-btn').addEventListener('click', () => {
+    if (!confirmLossyExport()) return;
     const url = URL.createObjectURL(new Blob([$('tailored-output').value], { type: 'text/plain' }));
     const a = document.createElement('a'); a.href = url; a.download = 'tailored-resume.txt'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -223,7 +262,11 @@
   window.addEventListener('beforeprint', preparePrint);
   window.addEventListener('afterprint', restoreAfterPrint);
 
+  function confirmLossyExport() {
+    return !$('jd-only-toggle').checked || window.confirm('Only JD-relevant lines is enabled. Exporting may omit unrelated resume content. Continue?');
+  }
   $('print-btn').addEventListener('click', () => {
+    if (!confirmLossyExport()) return;
     const t = document.title; document.title = '';
     const restoreTitle = () => (document.title = t);
     window.addEventListener('afterprint', restoreTitle, { once: true });
