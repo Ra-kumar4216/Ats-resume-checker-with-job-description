@@ -193,22 +193,28 @@
   }
 
   async function loadTemplates() {
-    // Try to fetch from JSON files first (works over http/https)
-    // If that fails (e.g., file:// protocol), fall back to inline templates
+    // Use inline templates as primary (works everywhere, no fetch needed)
+    // Optionally try to fetch JSON files for custom templates
+    const inlineTemplates = INLINE_TEMPLATES.map(t => ({ ...t }));
+    
     try {
       const base = baseUrl();
       const results = await Promise.allSettled(MANIFEST.map(filename => fetchTemplate(base + filename, filename)));
       const fetched = results.filter(r => r.status === 'fulfilled').map(r => r.value);
       if (fetched.length > 0) {
-        return fetched;
+        // Merge fetched with inline, preferring fetched for same IDs
+        const fetchedMap = new Map(fetched.map(t => [t.id, t]));
+        const merged = inlineTemplates.map(t => fetchedMap.get(t.id) || t);
+        // Add any fetched templates not in inline
+        fetched.forEach(t => {
+          if (!inlineTemplates.some(it => it.id === t.id)) merged.push(t);
+        });
+        return merged;
       }
-      // All fetches failed, use inline
-      console.warn('Template fetch failed (likely file:// protocol). Using inline templates.');
-      return INLINE_TEMPLATES.map(t => ({ ...t }));
     } catch {
-      console.warn('Template loading failed. Using inline templates.');
-      return INLINE_TEMPLATES.map(t => ({ ...t }));
+      // Ignore fetch errors, use inline
     }
+    return inlineTemplates;
   }
 
   function getTemplate(list, id) {
