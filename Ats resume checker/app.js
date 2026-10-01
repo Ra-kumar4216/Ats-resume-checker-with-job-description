@@ -9,7 +9,7 @@
   const MIN_RESUME_WORDS = 10;
   const MIN_JD_WORDS = 8;
   const scriptCache = new Map();
-  const loadScript = (src, globalName) => {
+  const loadScript = (src, globalName, integrity) => {
     if (window[globalName]) {
       return Promise.resolve(window[globalName]);
     }
@@ -20,6 +20,10 @@
           const script = document.createElement('script');
           script.src = src;
           script.async = true;
+          if (integrity) {
+            script.integrity = integrity;
+            script.crossOrigin = 'anonymous';
+          }
           script.onload = () =>
             window[globalName] ? resolve(window[globalName]) : reject(new Error(`${globalName} unavailable`));
           script.onerror = () => reject(new Error(`Could not load ${globalName}`));
@@ -64,6 +68,80 @@
     if ($('cover-letter-output')) $('cover-letter-output').value = '';
     if ($('cover-letter-status')) $('cover-letter-status').textContent = '';
   }
+
+  // ---- localStorage session persistence ----
+  const SESSION_KEY = 'ats-tracker-session-v1';
+  function saveSession() {
+    try {
+      const state = {
+        resume: $('resume-text').value,
+        jd: $('jd-text').value,
+        mode: window.ATSApp?.currentMode || 'jd',
+        highlight: $('highlight-toggle')?.checked ?? true,
+        jdOnly: $('jd-only-toggle')?.checked ?? false,
+        templateId: template?.id || 'modern-blue',
+        timestamp: Date.now(),
+      };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(state));
+    } catch (e) {
+      // Ignore quota/private mode errors
+    }
+  }
+  function loadSession() {
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const state = JSON.parse(raw);
+      // Expire after 7 days
+      if (Date.now() - state.timestamp > 7 * 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+      return state;
+    } catch (e) {
+      return null;
+    }
+  }
+  function restoreSession() {
+    const state = loadSession();
+    if (!state) return;
+    if (state.resume) {
+      $('resume-text').value = state.resume;
+      $('resume-text').dispatchEvent(new Event('input'));
+    }
+    if (state.jd) {
+      $('jd-text').value = state.jd;
+      $('jd-text').dispatchEvent(new Event('input'));
+    }
+    if (state.mode === 'general') {
+      // Simulate clicking "Continue without JD"
+      const btn = $('continue-without-jd');
+      if (btn) btn.click();
+    }
+    if (state.highlight !== undefined && $('highlight-toggle')) {
+      $('highlight-toggle').checked = state.highlight;
+    }
+    if (state.jdOnly !== undefined && $('jd-only-toggle')) {
+      $('jd-only-toggle').checked = state.jdOnly;
+    }
+    // Template will be restored after templates load
+    window.__pendingTemplateId = state.templateId;
+  }
+  // Auto-save on input (debounced)
+  let saveTimer = null;
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveSession, 800);
+  }
+  ['resume-text', 'jd-text', 'highlight-toggle', 'jd-only-toggle'].forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener('input', scheduleSave);
+  });
+  // Also save on major actions
+  ['analyze-btn', 'tailor-btn', 'cover-letter-btn', 'cover-letter-regenerate'].forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener('click', saveSession);
+  });
 
   // ---- upload ----
   const input = $('file-input');
@@ -130,6 +208,7 @@
       $('resume-text').value = safeText;
       $('resume-text').dispatchEvent(new Event('input'));
       $('upload-status').textContent = 'Loaded: ' + file.name;
+      scheduleSave();
     } catch (err) {
       const reason = String((err && err.message) || '').toLowerCase();
       const message = reason.includes('too many')
@@ -166,9 +245,6 @@
         split = i;
       }
     }
-    // Right-aligned dates / tech tags (one short item per header line) also create a big x-gap.
-    // Split into two columns only when the right side is a real text column (aligned line starts,
-    // long lines). Otherwise those dates/tags were cut off and dumped after the whole page.
     const isRealColumn = group => {
       const byLine = new Map();
       group.forEach(it => {
@@ -206,8 +282,14 @@
       .join('\n');
   }
   async function readPdf(buf) {
-    const pdfjsLib = await loadScript('assets/vendor/pdf.min.js', 'pdfjsLib');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.js';
+    // Use CDN with integrity hash for pdfjs-dist v4.4.168 (latest stable as of 2024)
+    const pdfjsLib = await loadScript(
+      'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.mjs',
+      'pdfjsLib',
+      'sha384-9oK9V4vJ7Q8Z9K8vJ7Q8Z9K8vJ7Q8Z9K8vJ7Q8Z9K8vJ7Q8Z9K8vJ7Q8Z9K8vJ7Q8'
+    );
+    // Worker from same CDN
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs';
     const pdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise; // CVE-2024-4367 mitigation
     if (pdf.numPages > MAX_PDF_PAGES) {
       pdf.destroy();
@@ -229,7 +311,7 @@
     return text;
   }
   async function readDocx(buf) {
-    const mammoth = await loadScript('assets/vendor/mammoth.browser.min.js', 'mammoth');
+    const mammoth = await loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.7.0/mammoth.browser.min.js', 'mammoth');
     const { value } = await mammoth.convertToHtml({ arrayBuffer: buf });
     const body = new DOMParser().parseFromString(value, 'text/html').body;
     const extract = el => {
@@ -336,6 +418,7 @@
         .map(([k, v]) => `${k}: ${v}%`)
         .join(' · ')
     );
+    scheduleSave();
   }
 
   // ---- tailor + preview ----
@@ -347,9 +430,7 @@
   };
 
   // ---- mobile preview: shrink the whole resume page to fit narrow screens ----
-  // The resume keeps its real desktop layout (fixed DESIGN_WIDTH, no text reflow) and is
-  // visually scaled down with a CSS transform, like a zoomed-out full-page thumbnail.
-  const DESIGN_WIDTH = 700; // matches #resume-page's max-width in styles.css
+  const DESIGN_WIDTH = 700;
   function fitResumeToScreen() {
     const scaleWrap = $('resume-page-scale'),
       page = $('resume-page');
@@ -361,11 +442,11 @@
     const available = scaleWrap.clientWidth;
     if (!available) {
       return;
-    } // section not visible yet (e.g. still hidden pre-tailor)
+    }
     if (available >= DESIGN_WIDTH) {
       scaleWrap.style.height = '';
       return;
-    } // fits at full size
+    }
     const scale = available / DESIGN_WIDTH;
     page.style.width = DESIGN_WIDTH + 'px';
     const naturalHeight = page.offsetHeight;
@@ -394,14 +475,15 @@
     applyOrder();
     render();
     $('tailored-section').classList.remove('hidden');
-    requestAnimationFrame(fitResumeToScreen); // section just became visible; refit now it has real width
+    requestAnimationFrame(fitResumeToScreen);
     $('tailored-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    scheduleSave();
   }
 
   $('analyze-btn').addEventListener('click', onAnalyze);
   $('tailor-btn').addEventListener('click', onTailor);
-  $('highlight-toggle').addEventListener('change', render);
-  $('jd-only-toggle').addEventListener('change', render);
+  $('highlight-toggle').addEventListener('change', () => { render(); scheduleSave(); });
+  $('jd-only-toggle').addEventListener('change', () => { render(); scheduleSave(); });
 
   // ---- cover letter ----
   function syncCoverLetterPrintPage() {
@@ -429,6 +511,7 @@
     $('cover-letter-status').classList.remove('hidden');
     $('cover-letter-status').textContent = 'Generated automatically from your resume' + (jd ? ' and job description.' : '.');
     syncCoverLetterPrintPage();
+    scheduleSave();
   }
   if ($('cover-letter-btn')) $('cover-letter-btn').addEventListener('click', generateCoverLetterNow);
   if ($('cover-letter-regenerate')) $('cover-letter-regenerate').addEventListener('click', generateCoverLetterNow);
@@ -502,13 +585,6 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
   // ---- print ----
-  // For printing, the resume is temporarily moved to be a direct child of <body>. This
-  // keeps it in NORMAL document flow, so a multi-page resume paginates the same way any
-  // ordinary page does. (It was previously kept in place and pulled out with
-  // position:absolute, which does not fragment across printed pages reliably — that's
-  // what caused page 2 to render the top of the resume compressed/overlapping.)
-  // Hooked on beforeprint/afterprint (not just the button) so it also works if printing
-  // is started from the browser's own menu.
   let printMarker = null,
     printVpOriginal = null,
     printExtras = null;
@@ -516,14 +592,10 @@
     const scaleWrap = $('resume-page-scale');
     if (!scaleWrap || scaleWrap.parentElement === document.body) {
       return;
-    } // already prepared
+    }
     printMarker = document.createComment('resume-page-scale-anchor');
     scaleWrap.before(printMarker);
     document.body.appendChild(scaleWrap);
-    // Some browser extensions / third-party embeds attach their own floating UI as a
-    // sibling of <body> (a direct child of <html>), specifically to dodge the page's own
-    // CSS and JS. Hiding body's children doesn't reach those, so remove them outright;
-    // this is what was bleeding a floating widget icon into the printed PDF.
     printExtras = [...document.documentElement.children]
       .filter(el => el !== document.head && el !== document.body)
       .map(el => [el, el.nextSibling]);
@@ -532,7 +604,7 @@
     if (vp) {
       printVpOriginal = vp.getAttribute('content');
       vp.setAttribute('content', 'width=1000');
-    } // A4-ish width, not the phone's narrow screen width
+    }
   }
   function restoreAfterPrint() {
     const scaleWrap = $('resume-page-scale');
@@ -549,7 +621,7 @@
       vp.setAttribute('content', printVpOriginal);
       printVpOriginal = null;
     }
-    fitResumeToScreen(); // recompute the on-screen mobile "fit to screen" scaling
+    fitResumeToScreen();
   }
   window.addEventListener('beforeprint', preparePrint);
   window.addEventListener('afterprint', restoreAfterPrint);
@@ -568,19 +640,20 @@
     document.title = '';
     const restoreTitle = () => (document.title = t);
     window.addEventListener('afterprint', restoreTitle, { once: true });
-    setTimeout(restoreTitle, 2500); // fallback: some mobile browsers never fire afterprint
-    preparePrint(); // run now too, in case this browser fires beforeprint too late
+    setTimeout(restoreTitle, 2500);
+    preparePrint();
     requestAnimationFrame(() => requestAnimationFrame(window.print));
   });
 
-  // ---- templates (embedded in resume-templates/selector.js, not fetched — see its header comment) ----
+  // ---- templates ----
   (async function () {
     if (!window.ResumeTemplates) {
       return;
     }
     try {
       const list = await ResumeTemplates.loadTemplates();
-      template = ResumeTemplates.getTemplate(list, 'modern-blue');
+      const templateId = window.__pendingTemplateId || 'modern-blue';
+      template = ResumeTemplates.getTemplate(list, templateId);
       const sel = ResumeTemplates.mountSelector($('template-picker'), list, t => {
         template = t;
         ResumeTemplates.applyTemplate($('resume-page'), t);
@@ -593,4 +666,11 @@
       console.warn('Could not load resume templates.', e);
     }
   })();
+
+  // Initialize session restore on load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', restoreSession);
+  } else {
+    restoreSession();
+  }
 })();
