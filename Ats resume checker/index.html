@@ -205,7 +205,10 @@
                     <span class="wizard-dot-num">4</span><span class="wizard-dot-label">Analyze</span>
                   </button>
                   <button type="button" class="wizard-dot" data-step="5" disabled>
-                    <span class="wizard-dot-num">5</span><span class="wizard-dot-label">Improve & Export</span>
+                    <span class="wizard-dot-num">5</span><span class="wizard-dot-label">Resume & Template</span>
+                  </button>
+                  <button type="button" class="wizard-dot" data-step="6" disabled>
+                    <span class="wizard-dot-num">6</span><span class="wizard-dot-label">Cover Letter</span>
                   </button>
                 </div>
               </div>
@@ -216,13 +219,13 @@
               <div>
                 <h2 class="text-lg font-bold">What do you want to analyze?</h2>
                 <p class="text-sm text-slate-400 mt-1">
-                  Choose how you want to proceed. You can analyze with a job description or check your resume health
+                  Choose how you want to proceed. Analyze your resume against a job description or check your resume quality
                   without one.
                 </p>
               </div>
 
               <div class="grid sm:grid-cols-2 gap-5">
-                <div id="mode-with-jd" class="mode-card mode-card--accent">
+                <div id="mode-with-jd" class="mode-card mode-card--accent flex flex-col">
                   <span class="mode-badge">Recommended</span>
                   <div class="mode-icon mode-icon--accent">
                     <svg
@@ -241,7 +244,7 @@
                   <p class="text-sm text-slate-400 mt-1.5">
                     Get a detailed ATS match analysis by comparing your resume with a specific job description.
                   </p>
-                  <ul class="text-sm text-slate-300 space-y-1.5 mt-4">
+                  <ul class="text-sm text-slate-300 space-y-1.5 mt-4 flex-1">
                     <li class="flex items-center gap-2">
                       <svg
                         viewBox="0 0 24 24"
@@ -272,6 +275,8 @@
                         <path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg
                       >Missing keywords
                     </li>
+                    <li class="flex items-center gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-violet-400 shrink-0" fill="currentColor"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg>Missing skills &amp; requirements</li>
+                    <li class="flex items-center gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-violet-400 shrink-0" fill="currentColor"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg>Resume problems &amp; fixes</li>
                     <li class="flex items-center gap-2">
                       <svg
                         viewBox="0 0 24 24"
@@ -280,7 +285,7 @@
                         aria-hidden="true"
                       >
                         <path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg
-                      >Tailored suggestions
+                      >Tailored resume suggestions
                     </li>
                   </ul>
                   <button
@@ -292,7 +297,7 @@
                   </button>
                 </div>
 
-                <div id="mode-without-jd" class="mode-card">
+                <div id="mode-without-jd" class="mode-card flex flex-col">
                   <div class="mode-icon">
                     <svg
                       viewBox="0 0 24 24"
@@ -310,7 +315,7 @@
                   <p class="text-sm text-slate-400 mt-1.5">
                     Check your resume's overall quality, ATS readiness and get improvement suggestions.
                   </p>
-                  <ul class="text-sm text-slate-300 space-y-1.5 mt-4">
+                  <ul class="text-sm text-slate-300 space-y-1.5 mt-4 flex-1">
                     <li class="flex items-center gap-2">
                       <svg
                         viewBox="0 0 24 24"
@@ -341,6 +346,7 @@
                         <path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg
                       >Structure check
                     </li>
+                    <li class="flex items-center gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-slate-400 shrink-0" fill="currentColor"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2 18.5 6.7z" /></svg>ATS formatting check</li>
                     <li class="flex items-center gap-2">
                       <svg
                         viewBox="0 0 24 24"
@@ -351,6 +357,7 @@
                         <path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg
                       >General improvement tips
                     </li>
+                    <li class="flex items-center gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-slate-400 shrink-0" fill="currentColor"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg>Resume improvement suggestions</li>
                   </ul>
                   <button
                     id="continue-without-jd"
@@ -564,20 +571,27 @@
             <div id="step-5" class="step-panel hidden space-y-6">
               <div class="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                  <h2 class="text-lg font-bold">Improve & export</h2>
-                  <p class="text-sm text-slate-400 mt-1">Pick a template, review the tailored preview, then export.</p>
+                  <h2 class="text-lg font-bold">Improve & build your resume</h2>
+                  <p class="text-sm text-slate-400 mt-1">Choose a resume template, review the improved resume, then continue to your cover letter.</p>
                 </div>
                 <button id="step5-back" type="button" class="step-nav-btn">← Back to analysis</button>
               </div>
 
               <section id="tailored-section" class="hidden space-y-4">
+                <section class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+                  <div>
+                    <h3 class="font-bold text-base">Choose Resume Template</h3>
+                    <p class="text-sm text-slate-400 mt-1">Select the template you want for your final ATS-friendly resume.</p>
+                  </div>
+                  <div id="template-picker" class="template-picker-card"></div>
+                </section>
+
                 <div
                   class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center gap-3 text-xs text-slate-300"
                 >
                   <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 mr-auto">
                     Tailored resume preview
                   </h3>
-                  <div id="template-picker"></div>
                   <label class="flex items-center gap-1.5"
                     ><input type="checkbox" id="highlight-toggle" class="accent-violet-500" checked /> Highlight
                     keywords</label
@@ -614,12 +628,70 @@
 
                 <div id="resume-page-scale"><div id="resume-page"></div></div>
                 <textarea id="tailored-output" class="hidden" aria-hidden="true" tabindex="-1"></textarea>
+                <div class="bg-violet-950/20 border border-violet-500/20 rounded-xl p-5 space-y-3">
+                  <div>
+                    <h3 class="font-bold text-base">Next: Create your cover letter</h3>
+                    <p class="text-sm text-slate-400 mt-1">Your cover letter will be generated automatically from the resume and, when available, the job description.</p>
+                  </div>
+                  <button id="cover-letter-next" type="button" class="step-nav-btn step-nav-btn--primary">Continue to Cover Letter →</button>
+                </div>
+
                 <p class="text-xs text-amber-400 text-center">
                   Re-read the result before submitting and check that no bullet landed under the wrong job or project.
                 </p>
               </section>
             </div>
           </div>
+
+            <!-- ---- STEP 6: Cover Letter & Export ---- -->
+            <div id="step-6" class="step-panel hidden space-y-6">
+              <div class="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <h2 class="text-lg font-bold">Cover Letter & Export</h2>
+                  <p class="text-sm text-slate-400 mt-1">Your cover letter is generated from the information in your resume and the job description.</p>
+                </div>
+                <button id="step6-back" type="button" class="step-nav-btn">← Back to resume</button>
+              </div>
+
+              <section id="cover-letter-section" class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <h3 class="font-bold text-base">Personalized Cover Letter</h3>
+                    <p class="text-sm text-slate-400 mt-1">Generated from your resume — no separate form is required.</p>
+                  </div>
+                  <button id="cover-letter-regenerate" type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 font-semibold px-4 py-2 rounded-lg text-sm">Regenerate</button>
+                </div>
+                <div id="cover-letter-status" class="hidden text-xs text-emerald-400" role="status"></div>
+                <textarea id="cover-letter-output" class="field min-h-[420px]" aria-label="Generated cover letter"></textarea>
+                <div class="flex flex-wrap gap-2">
+                  <button id="cover-letter-print" type="button" class="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-semibold px-4 py-2 rounded-lg text-sm">Print / Save Cover Letter as PDF</button>
+                  <button id="cover-letter-copy" type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 rounded-lg text-sm">Copy</button>
+                  <button id="cover-letter-download" type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 rounded-lg text-sm">Download .txt</button>
+                </div>
+                <p class="text-xs text-amber-400">Review the generated letter before sending. It only uses information available in your resume and job description.</p>
+              </section>
+
+              <section class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+                <div>
+                  <h3 class="font-bold text-base">Job Application Pack</h3>
+                  <p class="text-sm text-slate-400 mt-1">Your improved resume and personalized cover letter are ready.</p>
+                </div>
+                <div class="grid sm:grid-cols-2 gap-3 text-sm">
+                  <div class="bg-slate-950 border border-slate-800 rounded-lg p-4">
+                    <p class="font-semibold">✓ ATS-Friendly Resume</p>
+                    <p class="text-xs text-slate-400 mt-1">Selected template and improved content.</p>
+                  </div>
+                  <div class="bg-slate-950 border border-slate-800 rounded-lg p-4">
+                    <p class="font-semibold">✓ Personalized Cover Letter</p>
+                    <p class="text-xs text-slate-400 mt-1">Generated directly from your resume.</p>
+                  </div>
+                </div>
+                <button id="step6-resume-pdf" type="button" class="step-nav-btn step-nav-btn--primary">Print / Save Resume as PDF</button>
+              </section>
+
+              <!-- Hidden print-ready cover letter page. It becomes the only visible page when printing the cover letter. -->
+              <article id="cover-letter-print-page" aria-hidden="true"></article>
+            </div>
 
           <!-- ================= RIGHT COLUMN (persistent) ================= -->
           <aside class="space-y-6">
@@ -688,7 +760,11 @@
                     ><span class="text-xs text-slate-400">Improve your resume quality</span></span
                   >
                 </li>
-                <li class="flex gap-3">
+                                <li class="flex gap-3">
+                  <span class="feature-dot"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4v16M4 12h16" stroke-linecap="round" /></svg></span>
+                  <span><span class="block font-semibold">Resume Improvement</span><span class="text-xs text-slate-400">Fix weak sections and improve your resume</span></span>
+                </li>
+<li class="flex gap-3">
                   <span class="feature-dot"
                     ><svg
                       viewBox="0 0 24 24"
@@ -721,7 +797,7 @@
                       /></svg></span
                   ><span
                     ><span class="block font-semibold">Export Options</span
-                    ><span class="text-xs text-slate-400">Print to PDF, copy, or .txt</span></span
+                    ><span class="text-xs text-slate-400">Download PDF, DOCX or TXT</span></span
                   >
                 </li>
               </ul>
