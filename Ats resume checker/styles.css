@@ -58,7 +58,7 @@ html{scroll-behavior:smooth}
 .wizard-dot.is-skipped{opacity:.35}
 .wizard-dot:disabled{cursor:not-allowed}
 
-.mode-card{position:relative;background:#0f172a;border:1px solid #334155;border-radius:.9rem;padding:1.5rem;transition:border-color .15s}
+.mode-card{position:relative;background:#0f172a;border:1px solid #334155;border-radius:.9rem;padding:1.5rem;transition:border-color .15s;min-height:100%}
 .mode-card:hover{border-color:#8b5cf6}
 .mode-card--accent{border-color:rgba(139,92,246,.5);box-shadow:0 0 0 1px rgba(139,92,246,.2)}
 .mode-badge{position:absolute;top:1.25rem;right:1.25rem;font-size:.65rem;font-weight:700;background:rgba(16,185,129,.12);color:#34d399;border:1px solid rgba(16,185,129,.3);padding:.2rem .55rem;border-radius:9999px}
@@ -69,3 +69,16 @@ html{scroll-behavior:smooth}
 .step-nav-btn:hover{background:#334155}
 .step-nav-btn--primary{background:linear-gradient(90deg,#7c3aed,#4f46e5);border-color:transparent}
 .step-nav-btn--primary:hover{filter:brightness(1.08)}
+
+/* Cover letter page + print/PDF */
+#cover-letter-print-page{display:none;background:#fff;color:#1a1a1a;max-width:760px;margin:0 auto;padding:42px 48px;min-height:980px;font-family:Calibri,Arial,sans-serif;font-size:12.5pt;line-height:1.65}
+#cover-letter-print-page p{margin:0 0 16px;white-space:pre-wrap}
+body.print-cover-letter > *:not(#cover-letter-print-page){display:none!important}
+body.print-cover-letter #cover-letter-print-page{display:block!important}
+body.print-cover-letter{background:#fff!important}
+@media print{
+  body.print-cover-letter #cover-letter-print-page{display:block!important;max-width:none!important;width:auto!important;margin:0!important;padding:16mm 18mm!important;min-height:0!important;background:#fff!important;color:#111!important}
+  body.print-cover-letter #cover-letter-print-page p{font-size:12pt;line-height:1.6;margin:0 0 14pt}
+}
+
+.template-picker-card #template-select{margin-left:0;margin-top:8px;min-width:280px;padding:9px 12px;font-size:.875rem}
