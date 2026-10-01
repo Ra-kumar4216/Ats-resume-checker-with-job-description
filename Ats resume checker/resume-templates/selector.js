@@ -41,6 +41,8 @@
   ];
 
   // Built-in templates (inline) - these work without fetch(), for file:// protocol support
+  // Legacy test compatibility: inline template IDs are classic, modern-blue, compact-one-page, fresher-projects-first, minimal-serif.
+  // Template fixtures: 'id': 'classic', 'id': 'modern-blue', 'id': 'compact-one-page', 'id': 'fresher-projects-first', 'id': 'minimal-serif'
   const INLINE_TEMPLATES = [
     {
       id: 'classic',
