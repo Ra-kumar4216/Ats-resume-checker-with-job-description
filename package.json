@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "description": "Browser-only resume analysis and job-description matching tool",
-"scripts": {
+  "scripts": {
     "build": "npm run build:css",
     "build:css": "tailwindcss -i ./tailwind.input.css -o './Ats resume checker/tailwind.generated.css' --content './Ats resume checker/index.html' './Ats resume checker/**/*.js' --minify",
     "dev": "npx serve 'Ats resume checker'",
@@ -20,6 +20,9 @@
     "prettier": "^3.2.5",
     "husky": "^9.0.11",
     "serve": "^14.2.1"
+  },
+  "dependencies": {
+    "docx": "^8.5.0"
   },
   "engines": {
     "node": ">=18.0.0"
