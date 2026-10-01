@@ -45,6 +45,16 @@
     if (label) {
       label.textContent = 'Step ' + current + ' of 6';
     }
+    
+    // Save current step to session
+    try {
+      const state = JSON.parse(localStorage.getItem('ats-tracker-session-v1') || '{}');
+      state.currentStep = current;
+      state.mode = mode;
+      localStorage.setItem('ats-tracker-session-v1', JSON.stringify(state));
+    } catch (e) {
+      // ignore
+    }
   }
 
   function goTo(n) {
@@ -148,6 +158,25 @@
       }
     });
   });
+
+  // Restore step from session on load
+  try {
+    const state = JSON.parse(localStorage.getItem('ats-tracker-session-v1') || '{}');
+    if (state.currentStep && state.mode) {
+      mode = state.mode;
+      // Don't auto-advance past step 2 without resume, or step 3 without JD
+      const resume = $('resume-text')?.value?.trim();
+      const jd = $('jd-text')?.value?.trim();
+      let targetStep = state.currentStep;
+      if (targetStep > 2 && !resume) targetStep = 2;
+      if (targetStep > 3 && mode === 'jd' && !jd) targetStep = 3;
+      if (targetStep > 1) {
+        goTo(targetStep);
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
 
   render();
 })();
