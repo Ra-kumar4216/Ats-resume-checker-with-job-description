@@ -1,4 +1,4 @@
-/* UI wiring: upload, analyze, tailor, templates, export. Logic lives in engine.js. */
+/* UI wiring: upload, analyze, tailor, templates, cover letter and export. Logic lives in engine.js. */
 (function () {
   const $ = id => document.getElementById(id);
   let tailored = null,
@@ -60,6 +60,9 @@
     $('tailored-section').classList.add('hidden');
     $('resume-page').replaceChildren();
     $('tailored-output').value = '';
+    if ($('cover-letter-result')) $('cover-letter-result').classList.add('hidden');
+    if ($('cover-letter-output')) $('cover-letter-output').value = '';
+    if ($('cover-letter-status')) $('cover-letter-status').textContent = '';
   }
 
   // ---- upload ----
@@ -99,7 +102,7 @@
     }
     return '';
   };
-  window.ATSApp = { validateResume, validateJobDescription, showError, hideError };
+  window.ATSApp = { validateResume, validateJobDescription, showError, hideError, generateCoverLetter: generateCoverLetterNow };
 
   async function handleFile(file) {
     if (!file) {
@@ -400,6 +403,76 @@
   $('highlight-toggle').addEventListener('change', render);
   $('jd-only-toggle').addEventListener('change', render);
 
+  // ---- cover letter ----
+  function syncCoverLetterPrintPage() {
+    const source = $('cover-letter-output');
+    const page = $('cover-letter-print-page');
+    if (!source || !page) return;
+    page.replaceChildren();
+    const text = source.value.trim();
+    text.split(/\n\s*\n/).filter(Boolean).forEach(paragraph => {
+      const p = document.createElement('p');
+      p.textContent = paragraph.trim();
+      page.appendChild(p);
+    });
+  }
+
+  function generateCoverLetterNow() {
+    const resume = $('resume-text').value.trim();
+    const jd = $('jd-text').value.trim();
+    const resumeError = validateResume();
+    if (resumeError) return showError(resumeError);
+    hideError();
+    const letter = ATS.generateCoverLetter(resume, jd);
+    $('cover-letter-output').value = letter;
+    if ($('cover-letter-result')) $('cover-letter-result').classList.remove('hidden');
+    $('cover-letter-status').classList.remove('hidden');
+    $('cover-letter-status').textContent = 'Generated automatically from your resume' + (jd ? ' and job description.' : '.');
+    syncCoverLetterPrintPage();
+  }
+  if ($('cover-letter-btn')) $('cover-letter-btn').addEventListener('click', generateCoverLetterNow);
+  if ($('cover-letter-regenerate')) $('cover-letter-regenerate').addEventListener('click', generateCoverLetterNow);
+  if ($('cover-letter-output')) $('cover-letter-output').addEventListener('input', syncCoverLetterPrintPage);
+  if ($('cover-letter-copy')) $('cover-letter-copy').addEventListener('click', async e => {
+    try { await navigator.clipboard.writeText($('cover-letter-output').value); flash(e.target, 'Copied!'); }
+    catch { showError('Clipboard blocked by the browser.'); }
+  });
+  if ($('cover-letter-download')) $('cover-letter-download').addEventListener('click', () => {
+    const blob = new Blob([$('cover-letter-output').value], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'cover-letter.txt'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  let coverPrintMarker = null;
+  function printCoverLetter() {
+    syncCoverLetterPrintPage();
+    if (!$('cover-letter-output').value.trim()) {
+      generateCoverLetterNow();
+      syncCoverLetterPrintPage();
+    }
+    const page = $('cover-letter-print-page');
+    if (!page) return;
+    const t = document.title;
+    coverPrintMarker = document.createComment('cover-letter-print-anchor');
+    page.before(coverPrintMarker);
+    document.body.appendChild(page);
+    document.body.classList.add('print-cover-letter');
+    document.title = 'Cover Letter';
+    const restore = () => {
+      document.body.classList.remove('print-cover-letter');
+      document.title = t;
+      if (coverPrintMarker && page.parentElement === document.body) {
+        coverPrintMarker.replaceWith(page);
+        coverPrintMarker = null;
+      }
+    };
+    window.addEventListener('afterprint', restore, { once: true });
+    setTimeout(restore, 3000);
+    requestAnimationFrame(() => requestAnimationFrame(window.print));
+  }
+  if ($('cover-letter-print')) $('cover-letter-print').addEventListener('click', printCoverLetter);
+  if ($('step6-resume-pdf')) $('step6-resume-pdf').addEventListener('click', () => $('print-btn').click());
+
   // ---- export ----
   function flash(btn, msg) {
     const o = btn.textContent;
@@ -455,7 +528,7 @@
       .filter(el => el !== document.head && el !== document.body)
       .map(el => [el, el.nextSibling]);
     printExtras.forEach(([el]) => el.remove());
-    const vp = document.queryuerSelector('meta[name="viewport"]');
+    const vp = document.querySelector('meta[name="viewport"]');
     if (vp) {
       printVpOriginal = vp.getAttribute('content');
       vp.setAttribute('content', 'width=1000');
