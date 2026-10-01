@@ -12,11 +12,11 @@
   let furthest = 1; // furthest step reached, so people can revisit but not skip ahead
 
   const skip3 = () => mode === 'general';
-  const nextOf = n => (n === 2 && skip3() ? 4 : Math.min(n + 1, 5));
+  const nextOf = n => (n === 2 && skip3() ? 4 : Math.min(n + 1, 6));
   const prevOf = n => (n === 4 && skip3() ? 2 : Math.max(n - 1, 1));
 
   function render() {
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 6; i++) {
       const p = panel(i);
       if (p) {
         p.classList.toggle('hidden', i !== current);
@@ -43,12 +43,12 @@
 
     const label = $('wizard-step-label');
     if (label) {
-      label.textContent = 'Step ' + current + ' of 5';
+      label.textContent = 'Step ' + current + ' of 6';
     }
   }
 
   function goTo(n) {
-    current = Math.max(1, Math.min(5, n));
+    current = Math.max(1, Math.min(6, n));
     furthest = Math.max(furthest, current);
     render();
     const top = $('wizard-progress');
@@ -115,6 +115,15 @@
   });
   on('step4-back', 'click', () => goTo(prevOf(4)));
   on('step5-back', 'click', () => goTo(4));
+  on('step6-back', 'click', () => goTo(5));
+  on('cover-letter-next', 'click', () => {
+    if (validateResume() && !$('analysis-result').classList.contains('hidden')) {
+      if (window.ATSApp && window.ATSApp.generateCoverLetter) {
+        window.ATSApp.generateCoverLetter();
+      }
+      goTo(6);
+    }
+  });
 
   // These two buttons already run the real analysis/tailoring logic in app.js.
   // Here we only mark step 4 as reached, and move into step 5 once a tailored
