@@ -12,6 +12,104 @@
     <link rel="stylesheet" href="styles.css" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+    <style>
+      /* ===== ANIMATIONS ===== */
+      @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes slideInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+      @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); } 50% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); } }
+      @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+      @keyframes bounceIn { 0% { opacity: 0; transform: scale(0.3); } 50% { opacity: 1; transform: scale(1.05); } 70% { transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
+      @keyframes progressFill { from { width: 0%; } to { width: var(--progress-width, 0%); } }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+      .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
+      .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+      .animate-slide-in-right { animation: slideInRight 0.5s ease-out forwards; }
+      .animate-bounce-in { animation: bounceIn 0.6s ease-out forwards; }
+      .animate-pulse-glow { animation: pulseGlow 2s infinite; }
+      .animate-float { animation: float 3s ease-in-out infinite; }
+      .animate-spin { animation: spin 1s linear infinite; }
+
+      .stagger-1 { animation-delay: 0.1s; }
+      .stagger-2 { animation-delay: 0.2s; }
+      .stagger-3 { animation-delay: 0.3s; }
+      .stagger-4 { animation-delay: 0.4s; }
+      .stagger-5 { animation-delay: 0.5s; }
+      .stagger-6 { animation-delay: 0.6s; }
+
+      /* Hover animations */
+      .hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+      .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); }
+      .hover-scale { transition: transform 0.2s ease; }
+      .hover-scale:hover { transform: scale(1.02); }
+      .hover-glow { transition: box-shadow 0.3s ease; }
+      .hover-glow:hover { box-shadow: 0 0 20px rgba(139, 92, 246, 0.4); }
+
+      /* Button press animation */
+      .btn-press:active { transform: scale(0.98); }
+      .btn-press { transition: transform 0.1s ease; }
+
+      /* Card entrance */
+      .card-entrance { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+
+      /* Progress bar animation */
+      .progress-bar { height: 4px; background: linear-gradient(90deg, #8b5cf6, #a855f7); border-radius: 2px; transform-origin: left; transform: scaleX(0); animation: progressFill 0.8s ease-out forwards; }
+      .progress-bar.instant { animation: none; transform: scaleX(1); }
+
+      /* Wizard dot animation */
+      .wizard-dot { position: relative; transition: all 0.3s ease; }
+      .wizard-dot.is-active .wizard-dot-num { animation: bounceIn 0.4s ease-out; }
+      .wizard-dot.is-done .wizard-dot-num { color: #10b981; }
+
+      /* Score circle animation */
+      #score-circle { transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1); }
+
+      /* Tag animation */
+      .tag-matched, .tag-missing { animation: fadeIn 0.3s ease-out backwards; }
+      .tag-matched:nth-child(n) { animation-delay: calc(0.05s * n); }
+      .tag-missing:nth-child(n) { animation-delay: calc(0.05s * n); }
+
+      /* Step panel transition */
+      .step-panel { transition: opacity 0.3s ease, transform 0.3s ease; }
+      .step-panel.hidden { opacity: 0; pointer-events: none; }
+      .step-panel:not(.hidden) { opacity: 1; pointer-events: auto; }
+
+      /* Upload zone */
+      #drop-zone { transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease; }
+      #drop-zone:hover { border-color: #8b5cf6; background-color: rgba(139, 92, 246, 0.05); }
+      #drop-zone.drag-active { border-color: #10b981; background-color: rgba(16, 185, 129, 0.1); transform: scale(1.01); }
+
+      /* Form inputs */
+      .field { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+      .field:focus { box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2); }
+
+      /* Mode cards */
+      .mode-card { transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
+      .mode-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -10px rgba(0,0,0,0.4); }
+      .mode-card--accent:hover { border-color: #8b5cf6; }
+
+      /* Template picker */
+      #template-select { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+      #template-select:focus { box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2); }
+
+      /* Resume preview */
+      #resume-page { transition: opacity 0.3s ease; }
+      #resume-page-scale { perspective: 1000px; }
+
+      /* Sidebar logo */
+      aside img { transition: transform 0.3s ease; }
+      aside img:hover { transform: rotate(3deg) scale(1.05); }
+
+      /* Loading shimmer */
+      .shimmer { background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; }
+
+      /* Reduced motion */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+      }
+    </style>
   </head>
 
   <body class="bg-slate-950 text-slate-100 min-h-screen">
@@ -124,34 +222,34 @@
           <!-- ================= MAIN COLUMN ================= -->
           <div class="min-w-0 space-y-8">
             <!-- ---- Hero (step 1 only) ---- -->
-            <section id="hero" class="space-y-5">
+            <section id="hero" class="space-y-5 animate-fade-in-up">
               <span
-                class="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-300 bg-violet-500/10 border border-violet-500/30 px-3 py-1.5 rounded-full"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-300 bg-violet-500/10 border border-violet-500/30 px-3 py-1.5 rounded-full animate-fade-in stagger-1"
               >
-                <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="currentColor" aria-hidden="true">
+                <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 animate-float" fill="currentColor" aria-hidden="true">
                   <path d="M12 2l1.8 5.6L19 9.5l-5.2 1.9L12 17l-1.8-5.6L5 9.5l5.2-1.9L12 2Z" />
                 </svg>
                 Browser Resume Analysis
               </span>
-              <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">
+              <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight animate-fade-in-up stagger-2">
                 Find Your
                 <span class="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent"
                   >Perfect Match</span
                 >
               </h1>
-              <p class="text-slate-400 max-w-2xl">
+              <p class="text-slate-400 max-w-2xl animate-fade-in stagger-3">
                 Analyze your resume against job descriptions, get transparent keyword coverage and structure feedback to
                 improve your resume.
               </p>
 
-              <div class="flex flex-wrap gap-x-6 gap-y-3 pt-1">
-                <div class="flex items-center gap-2 text-sm text-slate-300">
+              <div class="flex flex-wrap gap-x-6 gap-y-3 pt-1 animate-fade-in stagger-4">
+                <div class="flex items-center gap-2 text-sm text-slate-300 hover-lift">
                   <span class="feature-dot"
                     ><svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor" aria-hidden="true">
                       <path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" /></svg></span
                   >ATS-friendly Analysis
                 </div>
-                <div class="flex items-center gap-2 text-sm text-slate-300">
+                <div class="flex items-center gap-2 text-sm text-slate-300 hover-lift">
                   <span class="feature-dot"
                     ><svg
                       viewBox="0 0 24 24"
@@ -165,7 +263,7 @@
                       <path d="m20 20-3-3" stroke-linecap="round" /></svg></span
                   >Keyword Matching
                 </div>
-                <div class="flex items-center gap-2 text-sm text-slate-300">
+                <div class="flex items-center gap-2 text-sm text-slate-300 hover-lift">
                   <span class="feature-dot"
                     ><svg
                       viewBox="0 0 24 24"
@@ -179,7 +277,7 @@
                       <circle cx="12" cy="12" r="9" /></svg></span
                   >Resume Structure Check
                 </div>
-                <div class="flex items-center gap-2 text-sm text-slate-300">
+                <div class="flex items-center gap-2 text-sm text-slate-300 hover-lift">
                   <span class="feature-dot"
                     ><svg
                       viewBox="0 0 24 24"
@@ -196,27 +294,27 @@
             </section>
 
             <!-- ---- Wizard progress (always visible) ---- -->
-            <div id="wizard-progress" class="bg-slate-900 border border-slate-800 rounded-xl px-5 pt-4 pb-5" role="navigation" aria-label="Wizard progress">
+            <div id="wizard-progress" class="bg-slate-900 border border-slate-800 rounded-xl px-5 pt-4 pb-5 animate-fade-in-up stagger-1" role="navigation" aria-label="Wizard progress">
               <p id="wizard-step-label" class="text-xs font-semibold text-violet-300 mb-3" aria-live="polite">Step 1 of 6</p>
               <div class="relative">
                 <div class="wizard-track" aria-hidden="true"></div>
                 <div class="relative z-[1] flex justify-between">
-                  <button type="button" class="wizard-dot" data-step="1" aria-current="step" aria-label="Step 1: Choose Mode">
+                  <button type="button" class="wizard-dot animate-bounce-in stagger-1" data-step="1" aria-current="step" aria-label="Step 1: Choose Mode">
                     <span class="wizard-dot-num">1</span><span class="wizard-dot-label">Choose Mode</span>
                   </button>
-                  <button type="button" class="wizard-dot" data-step="2" disabled aria-label="Step 2: Upload Resume">
+                  <button type="button" class="wizard-dot animate-fade-in stagger-2" data-step="2" disabled aria-label="Step 2: Upload Resume">
                     <span class="wizard-dot-num">2</span><span class="wizard-dot-label">Upload Resume</span>
                   </button>
-                  <button type="button" class="wizard-dot" data-step="3" disabled aria-label="Step 3: Add Job Description">
+                  <button type="button" class="wizard-dot animate-fade-in stagger-3" data-step="3" disabled aria-label="Step 3: Add Job Description">
                     <span class="wizard-dot-num">3</span><span class="wizard-dot-label">Add Job Description</span>
                   </button>
-                  <button type="button" class="wizard-dot" data-step="4" disabled aria-label="Step 4: Analyze">
+                  <button type="button" class="wizard-dot animate-fade-in stagger-4" data-step="4" disabled aria-label="Step 4: Analyze">
                     <span class="wizard-dot-num">4</span><span class="wizard-dot-label">Analyze</span>
                   </button>
-                  <button type="button" class="wizard-dot" data-step="5" disabled aria-label="Step 5: Resume & Template">
+                  <button type="button" class="wizard-dot animate-fade-in stagger-5" data-step="5" disabled aria-label="Step 5: Resume & Template">
                     <span class="wizard-dot-num">5</span><span class="wizard-dot-label">Resume & Template</span>
                   </button>
-                  <button type="button" class="wizard-dot" data-step="6" disabled aria-label="Step 6: Cover Letter">
+                  <button type="button" class="wizard-dot animate-fade-in stagger-6" data-step="6" disabled aria-label="Step 6: Cover Letter">
                     <span class="wizard-dot-num">6</span><span class="wizard-dot-label">Cover Letter</span>
                   </button>
                 </div>
@@ -234,9 +332,9 @@
               </div>
 
               <div class="grid sm:grid-cols-2 gap-5">
-                <div id="mode-with-jd" class="mode-card mode-card--accent flex flex-col">
-                  <span class="mode-badge">Recommended</span>
-                  <div class="mode-icon mode-icon--accent" aria-hidden="true">
+                <div id="mode-with-jd" class="mode-card mode-card--accent flex flex-col hover-lift hover-glow animate-fade-in-up stagger-1">
+                  <span class="mode-badge animate-bounce-in">Recommended</span>
+                  <div class="mode-icon mode-icon--accent animate-float" aria-hidden="true">
                     <svg
                       viewBox="0 0 24 24"
                       class="w-6 h-6"
@@ -254,7 +352,7 @@
                     Get a detailed ATS match analysis by comparing your resume with a specific job description.
                   </p>
                   <ul class="text-sm text-slate-300 space-y-1.5 mt-4 flex-1">
-                    <li class="flex items-center gap-2">
+                    <li class="flex items-center gap-2 animate-fade-in stagger-1">
                       <svg
                         viewBox="0 0 24 24"
                         class="w-4 h-4 text-violet-400 shrink-0"
@@ -264,7 +362,7 @@
                         <path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg
                       >Job match score
                     </li>
-                    <li class="flex items-center gap-2">
+                    <li class="flex items-center gap-2 animate-fade-in stagger-2">
                       <svg
                         viewBox="0 0 24 24"
                         class="w-4 h-4 text-violet-400 shrink-0"
@@ -274,7 +372,7 @@
                         <path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg
                       >Keyword matching
                     </li>
-                    <li class="flex items-center gap-2">
+                    <li class="flex items-center gap-2 animate-fade-in stagger-3">
                       <svg
                         viewBox="0 0 24 24"
                         class="w-4 h-4 text-violet-400 shrink-0"
@@ -284,9 +382,9 @@
                         <path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg
                       >Missing keywords
                     </li>
-                    <li class="flex items-center gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-violet-400 shrink-0" fill="currentColor"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg>Missing skills & requirements</li>
-                    <li class="flex items-center gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-violet-400 shrink-0" fill="currentColor"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg>Resume problems & fixes</li>
-                    <li class="flex items-center gap-2">
+                    <li class="flex items-center gap-2 animate-fade-in stagger-4"><svg viewBox="0 0 24 24" class="w-4 h-4 text-violet-400 shrink-0" fill="currentColor"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg>Missing skills & requirements</li>
+                    <li class="flex items-center gap-2 animate-fade-in stagger-5"><svg viewBox="0 0 24 24" class="w-4 h-4 text-violet-400 shrink-0" fill="currentColor"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg>Resume problems & fixes</li>
+                    <li class="flex items-center gap-2 animate-fade-in stagger-6">
                       <svg
                         viewBox="0 0 24 24"
                         class="w-4 h-4 text-violet-400 shrink-0"
@@ -300,14 +398,14 @@
                   <button
                     id="continue-with-jd"
                     type="button"
-                    class="w-full mt-5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-semibold py-2.5 rounded-xl"
+                    class="w-full mt-5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-semibold py-2.5 rounded-xl btn-press hover-lift hover-glow animate-slide-in-right stagger-6"
                   >
                     Continue with JD &rarr;
                   </button>
                 </div>
 
-                <div id="mode-without-jd" class="mode-card flex flex-col">
-                  <div class="mode-icon" aria-hidden="true">
+                <div id="mode-without-jd" class="mode-card flex flex-col hover-lift animate-fade-in-up stagger-2">
+                  <div class="mode-icon animate-float" aria-hidden="true">
                     <svg
                       viewBox="0 0 24 24"
                       class="w-6 h-6"
@@ -325,7 +423,7 @@
                     Check your resume's overall quality, ATS readiness and get improvement suggestions.
                   </p>
                   <ul class="text-sm text-slate-300 space-y-1.5 mt-4 flex-1">
-                    <li class="flex items-center gap-2">
+                    <li class="flex items-center gap-2 animate-fade-in stagger-1">
                       <svg
                         viewBox="0 0 24 24"
                         class="w-4 h-4 text-slate-400 shrink-0"
@@ -335,7 +433,7 @@
                         <path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg
                       >Resume health score
                     </li>
-                    <li class="flex items-center gap-2">
+                    <li class="flex items-center gap-2 animate-fade-in stagger-2">
                       <svg
                         viewBox="0 0 24 24"
                         class="w-4 h-4 text-slate-400 shrink-0"
@@ -345,7 +443,7 @@
                         <path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg
                       >Skills & experience check
                     </li>
-                    <li class="flex items-center gap-2">
+                    <li class="flex items-center gap-2 animate-fade-in stagger-3">
                       <svg
                         viewBox="0 0 24 24"
                         class="w-4 h-4 text-slate-400 shrink-0"
@@ -355,8 +453,8 @@
                         <path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg
                       >Structure check
                     </li>
-                    <li class="flex items-center gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-slate-400 shrink-0" fill="currentColor"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2 18.5 6.7z" /></svg>ATS formatting check</li>
-                    <li class="flex items-center gap-2">
+                    <li class="flex items-center gap-2 animate-fade-in stagger-4"><svg viewBox="0 0 24 24" class="w-4 h-4 text-slate-400 shrink-0" fill="currentColor"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2 18.5 6.7z" /></svg>ATS formatting check</li>
+                    <li class="flex items-center gap-2 animate-fade-in stagger-5">
                       <svg
                         viewBox="0 0 24 24"
                         class="w-4 h-4 text-slate-400 shrink-0"
@@ -366,12 +464,12 @@
                         <path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg
                       >General improvement tips
                     </li>
-                    <li class="flex items-center gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-slate-400 shrink-0" fill="currentColor"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg>Resume improvement suggestions</li>
+                    <li class="flex items-center gap-2 animate-fade-in stagger-6"><svg viewBox="0 0 24 24" class="w-4 h-4 text-slate-400 shrink-0" fill="currentColor"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg>Resume improvement suggestions</li>
                   </ul>
                   <button
                     id="continue-without-jd"
                     type="button"
-                    class="w-full mt-5 bg-slate-800 hover:bg-slate-700 border border-slate-700 font-semibold py-2.5 rounded-xl"
+                    class="w-full mt-5 bg-slate-800 hover:bg-slate-700 border border-slate-700 font-semibold py-2.5 rounded-xl btn-press hover-lift animate-slide-in-right stagger-6"
                   >
                     Continue without JD &rarr;
                   </button>
@@ -380,10 +478,10 @@
 
               <div
                 id="how-it-works"
-                class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-wrap items-center gap-5"
+                class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-wrap items-center gap-5 animate-fade-in-up stagger-3 hover-lift"
               >
                 <div
-                  class="w-24 h-16 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0"
+                  class="w-24 h-16 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0 animate-float"
                   aria-hidden="true"
                 >
                   <svg viewBox="0 0 24 24" class="w-7 h-7 text-violet-400" fill="currentColor" aria-hidden="true">
@@ -417,7 +515,7 @@
                 <label
                   id="drop-zone"
                   for="file-input"
-                  class="block border-2 border-dashed border-slate-700 rounded-lg p-6 text-center cursor-pointer hover:border-violet-500"
+                  class="block border-2 border-dashed border-slate-700 rounded-lg p-6 text-center cursor-pointer hover:border-violet-500 hover-lift"
                 >
                   <input type="file" id="file-input" accept=".pdf,.docx,.txt" class="sr-only" aria-label="Upload resume file" />
                   <span class="block text-sm text-slate-300"
@@ -487,7 +585,7 @@
                 <button
                   id="analyze-btn"
                   type="button"
-                  class="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-semibold px-6 py-3 rounded-xl shrink-0"
+                  class="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-semibold px-6 py-3 rounded-xl shrink-0 btn-press hover-lift hover-glow animate-pulse-glow"
                 >
                   Analyze & score
                 </button>
@@ -507,7 +605,7 @@
                   <button
                     id="tailor-btn"
                     type="button"
-                    class="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-semibold px-4 py-2 rounded-lg text-sm"
+                    class="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-semibold px-4 py-2 rounded-lg text-sm btn-press hover-lift hover-glow"
                   >
                     Generate Tailored Resume &rarr;
                   </button>
@@ -618,7 +716,7 @@
                     <button
                       id="print-btn"
                       type="button"
-                      class="bg-violet-600 hover:bg-violet-500 px-3 py-1.5 rounded-lg"
+                      class="bg-violet-600 hover:bg-violet-500 px-3 py-1.5 rounded-lg btn-press hover-lift"
                       aria-label="Print or save resume as PDF"
                     >
                       Print / Save as PDF
@@ -626,7 +724,7 @@
                     <button
                       id="copy-btn"
                       type="button"
-                      class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg"
+                      class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg btn-press hover-lift"
                       aria-label="Copy resume text to clipboard"
                     >
                       Copy text
@@ -634,10 +732,18 @@
                     <button
                       id="download-btn"
                       type="button"
-                      class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg"
+                      class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg btn-press hover-lift"
                       aria-label="Download resume as text file"
                     >
                       .txt
+                    </button>
+                    <button
+                      id="download-docx-btn"
+                      type="button"
+                      class="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded-lg btn-press hover-lift hover-glow"
+                      aria-label="Download resume as Word document"
+                    >
+                      .docx
                     </button>
                   </div>
                 </div>
@@ -672,14 +778,15 @@
                     <h3 class="font-bold text-base">Personalized Cover Letter</h3>
                     <p class="text-sm text-slate-400 mt-1">Generated from your resume &mdash; no separate form is required.</p>
                   </div>
-                  <button id="cover-letter-regenerate" type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 font-semibold px-4 py-2 rounded-lg text-sm">Regenerate</button>
+                  <button id="cover-letter-regenerate" type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 font-semibold px-4 py-2 rounded-lg text-sm btn-press hover-lift">Regenerate</button>
                 </div>
                 <div id="cover-letter-status" class="hidden text-xs text-emerald-400" role="status" aria-live="polite"></div>
                 <textarea id="cover-letter-output" class="field min-h-[420px]" aria-label="Generated cover letter"></textarea>
                 <div class="flex flex-wrap gap-2">
-                  <button id="cover-letter-print" type="button" class="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-semibold px-4 py-2 rounded-lg text-sm">Print / Save Cover Letter as PDF</button>
-                  <button id="cover-letter-copy" type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 rounded-lg text-sm">Copy</button>
-                  <button id="cover-letter-download" type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 rounded-lg text-sm">Download .txt</button>
+                  <button id="cover-letter-print" type="button" class="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-semibold px-4 py-2 rounded-lg text-sm btn-press hover-lift hover-glow">Print / Save Cover Letter as PDF</button>
+                  <button id="cover-letter-copy" type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 rounded-lg text-sm btn-press hover-lift">Copy</button>
+                  <button id="cover-letter-download" type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 rounded-lg text-sm btn-press hover-lift">Download .txt</button>
+                  <button id="cover-letter-download-docx" type="button" class="bg-emerald-600 hover:bg-emerald-500 px-3 py-2 rounded-lg text-sm btn-press hover-lift hover-glow">Download .docx</button>
                 </div>
                 <p class="text-xs text-amber-400">Review the generated letter before sending. It only uses information available in your resume and job description.</p>
               </section>
@@ -699,7 +806,7 @@
                     <p class="text-xs text-slate-400 mt-1">Generated directly from your resume.</p>
                   </div>
                 </div>
-                <button id="step6-resume-pdf" type="button" class="step-nav-btn step-nav-btn--primary">Print / Save Resume as PDF</button>
+                <button id="step6-resume-pdf" type="button" class="step-nav-btn step-nav-btn--primary btn-press hover-lift hover-glow">Print / Save Resume as PDF</button>
               </section>
 
               <!-- Hidden print-ready cover letter page. It becomes the only visible page when printing the cover letter. -->
@@ -708,7 +815,7 @@
 
           <!-- ================= RIGHT COLUMN (persistent) ================= -->
           <aside class="space-y-6">
-            <div id="video-guide" class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <div id="video-guide" class="bg-slate-900 border border-slate-800 rounded-xl p-4 hover-lift animate-fade-in-up">
               <p class="text-sm font-bold mb-3">Product preview</p>
               <video
                 class="w-full aspect-video rounded-lg border border-slate-800 bg-black"
@@ -728,10 +835,10 @@
               <p class="text-xs text-slate-400 mt-2">A quick look at the upload &rarr; analyze &rarr; tailor flow.</p>
             </div>
 
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 hover-lift animate-fade-in-up stagger-1">
               <p class="text-sm font-bold mb-4">Quick Features</p>
               <ul class="space-y-3.5 text-sm">
-                <li class="flex gap-3">
+                <li class="flex gap-3 hover-lift animate-fade-in stagger-1">
                   <span class="feature-dot" aria-hidden="true"
                     ><svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor" aria-hidden="true">
                       <path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" /></svg></span
@@ -740,7 +847,7 @@
                     ><span class="text-xs text-slate-400">Know your match percentage</span></span
                   >
                 </li>
-                <li class="flex gap-3">
+                <li class="flex gap-3 hover-lift animate-fade-in stagger-2">
                   <span class="feature-dot" aria-hidden="true"
                     ><svg
                       viewBox="0 0 24 24"
@@ -757,7 +864,7 @@
                     ><span class="text-xs text-slate-400">Find missing keywords</span></span
                   >
                 </li>
-                <li class="flex gap-3">
+                <li class="flex gap-3 hover-lift animate-fade-in stagger-3">
                   <span class="feature-dot" aria-hidden="true"
                     ><svg
                       viewBox="0 0 24 24"
@@ -774,11 +881,11 @@
                     ><span class="text-xs text-slate-400">Improve your resume quality</span></span
                   >
                 </li>
-                <li class="flex gap-3">
+                <li class="flex gap-3 hover-lift animate-fade-in stagger-4">
                   <span class="feature-dot" aria-hidden="true"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4v16M4 12h16" stroke-linecap="round" /></svg></span>
                   <span><span class="block font-semibold">Resume Improvement</span><span class="text-xs text-slate-400">Fix weak sections and improve your resume</span></span>
                 </li>
-                <li class="flex gap-3">
+                <li class="flex gap-3 hover-lift animate-fade-in stagger-5">
                   <span class="feature-dot" aria-hidden="true"
                     ><svg
                       viewBox="0 0 24 24"
@@ -794,7 +901,7 @@
                     ><span class="text-xs text-slate-400">Get job-specific resume</span></span
                   >
                 </li>
-                <li class="flex gap-3">
+                <li class="flex gap-3 hover-lift animate-fade-in stagger-6">
                   <span class="feature-dot" aria-hidden="true"
                     ><svg
                       viewBox="0 0 24 24"
