@@ -3,9 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="ATS Tracker Pro - Free browser-based resume analyzer and job description matcher. 100% private, no data leaves your browser." />
+    <meta name="theme-color" content="#1e1b4b" />
+    <!-- CSP meta tag for defense-in-depth (Vercel headers are primary) -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" />
     <title>ATS Tracker Pro</title>
     <link rel="stylesheet" href="tailwind.generated.css" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
   </head>
 
   <body class="bg-slate-950 text-slate-100 min-h-screen">
@@ -68,6 +74,7 @@
               type="button"
               title="Theme"
               class="w-9 h-9 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 flex items-center justify-center transition-colors"
+              aria-label="Toggle theme"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -88,6 +95,7 @@
               type="button"
               title="Notifications"
               class="w-9 h-9 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 flex items-center justify-center transition-colors"
+              aria-label="Notifications"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -103,6 +111,7 @@
             </button>
             <div
               class="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-sm font-bold"
+              aria-hidden="true"
             >
               R
             </div>
@@ -187,27 +196,27 @@
             </section>
 
             <!-- ---- Wizard progress (always visible) ---- -->
-            <div id="wizard-progress" class="bg-slate-900 border border-slate-800 rounded-xl px-5 pt-4 pb-5">
-              <p id="wizard-step-label" class="text-xs font-semibold text-violet-300 mb-3">Step 1 of 5</p>
+            <div id="wizard-progress" class="bg-slate-900 border border-slate-800 rounded-xl px-5 pt-4 pb-5" role="navigation" aria-label="Wizard progress">
+              <p id="wizard-step-label" class="text-xs font-semibold text-violet-300 mb-3" aria-live="polite">Step 1 of 6</p>
               <div class="relative">
-                <div class="wizard-track"></div>
+                <div class="wizard-track" aria-hidden="true"></div>
                 <div class="relative z-[1] flex justify-between">
-                  <button type="button" class="wizard-dot" data-step="1" aria-current="step">
+                  <button type="button" class="wizard-dot" data-step="1" aria-current="step" aria-label="Step 1: Choose Mode">
                     <span class="wizard-dot-num">1</span><span class="wizard-dot-label">Choose Mode</span>
                   </button>
-                  <button type="button" class="wizard-dot" data-step="2" disabled>
+                  <button type="button" class="wizard-dot" data-step="2" disabled aria-label="Step 2: Upload Resume">
                     <span class="wizard-dot-num">2</span><span class="wizard-dot-label">Upload Resume</span>
                   </button>
-                  <button type="button" class="wizard-dot" data-step="3" disabled>
+                  <button type="button" class="wizard-dot" data-step="3" disabled aria-label="Step 3: Add Job Description">
                     <span class="wizard-dot-num">3</span><span class="wizard-dot-label">Add Job Description</span>
                   </button>
-                  <button type="button" class="wizard-dot" data-step="4" disabled>
+                  <button type="button" class="wizard-dot" data-step="4" disabled aria-label="Step 4: Analyze">
                     <span class="wizard-dot-num">4</span><span class="wizard-dot-label">Analyze</span>
                   </button>
-                  <button type="button" class="wizard-dot" data-step="5" disabled>
+                  <button type="button" class="wizard-dot" data-step="5" disabled aria-label="Step 5: Resume & Template">
                     <span class="wizard-dot-num">5</span><span class="wizard-dot-label">Resume & Template</span>
                   </button>
-                  <button type="button" class="wizard-dot" data-step="6" disabled>
+                  <button type="button" class="wizard-dot" data-step="6" disabled aria-label="Step 6: Cover Letter">
                     <span class="wizard-dot-num">6</span><span class="wizard-dot-label">Cover Letter</span>
                   </button>
                 </div>
@@ -215,9 +224,9 @@
             </div>
 
             <!-- ---- STEP 1: Choose Mode ---- -->
-            <div id="step-1" class="step-panel space-y-6">
+            <div id="step-1" class="step-panel space-y-6" role="tabpanel" aria-labelledby="step1-title">
               <div>
-                <h2 class="text-lg font-bold">What do you want to analyze?</h2>
+                <h2 id="step1-title" class="text-lg font-bold">What do you want to analyze?</h2>
                 <p class="text-sm text-slate-400 mt-1">
                   Choose how you want to proceed. Analyze your resume against a job description or check your resume quality
                   without one.
@@ -227,7 +236,7 @@
               <div class="grid sm:grid-cols-2 gap-5">
                 <div id="mode-with-jd" class="mode-card mode-card--accent flex flex-col">
                   <span class="mode-badge">Recommended</span>
-                  <div class="mode-icon mode-icon--accent">
+                  <div class="mode-icon mode-icon--accent" aria-hidden="true">
                     <svg
                       viewBox="0 0 24 24"
                       class="w-6 h-6"
@@ -275,8 +284,8 @@
                         <path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg
                       >Missing keywords
                     </li>
-                    <li class="flex items-center gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-violet-400 shrink-0" fill="currentColor"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg>Missing skills &amp; requirements</li>
-                    <li class="flex items-center gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-violet-400 shrink-0" fill="currentColor"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg>Resume problems &amp; fixes</li>
+                    <li class="flex items-center gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-violet-400 shrink-0" fill="currentColor"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg>Missing skills & requirements</li>
+                    <li class="flex items-center gap-2"><svg viewBox="0 0 24 24" class="w-4 h-4 text-violet-400 shrink-0" fill="currentColor"><path d="m9 16.2-3.5-3.5L4 14.2 9 19.2 20 8.2l-1.5-1.5z" /></svg>Resume problems & fixes</li>
                     <li class="flex items-center gap-2">
                       <svg
                         viewBox="0 0 24 24"
@@ -293,12 +302,12 @@
                     type="button"
                     class="w-full mt-5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-semibold py-2.5 rounded-xl"
                   >
-                    Continue with JD →
+                    Continue with JD &rarr;
                   </button>
                 </div>
 
                 <div id="mode-without-jd" class="mode-card flex flex-col">
-                  <div class="mode-icon">
+                  <div class="mode-icon" aria-hidden="true">
                     <svg
                       viewBox="0 0 24 24"
                       class="w-6 h-6"
@@ -364,7 +373,7 @@
                     type="button"
                     class="w-full mt-5 bg-slate-800 hover:bg-slate-700 border border-slate-700 font-semibold py-2.5 rounded-xl"
                   >
-                    Continue without JD →
+                    Continue without JD &rarr;
                   </button>
                 </div>
               </div>
@@ -375,6 +384,7 @@
               >
                 <div
                   class="w-24 h-16 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0"
+                  aria-hidden="true"
                 >
                   <svg viewBox="0 0 24 24" class="w-7 h-7 text-violet-400" fill="currentColor" aria-hidden="true">
                     <path d="M8 5v14l11-7Z" />
@@ -383,21 +393,21 @@
                 <div class="flex-1 min-w-[200px]">
                   <h3 class="font-bold text-sm">See ATS Tracker Pro in action</h3>
                   <p class="text-xs text-slate-400 mt-1">
-                    A short preview of the upload → analyze → tailor flow, right in your browser.
+                    A short preview of the upload &rarr; analyze &rarr; tailor flow, right in your browser.
                   </p>
                 </div>
                 <a
                   href="#video-guide"
                   class="text-sm font-semibold text-violet-300 hover:text-violet-200 whitespace-nowrap"
-                  >Jump to preview ↓</a
+                  >Jump to preview &darr;</a
                 >
               </div>
             </div>
 
             <!-- ---- STEP 2: Upload Resume ---- -->
-            <div id="step-2" class="step-panel hidden space-y-6">
+            <div id="step-2" class="step-panel hidden space-y-6" role="tabpanel" aria-labelledby="step2-title">
               <div>
-                <h2 class="text-lg font-bold">Upload your resume</h2>
+                <h2 id="step2-title" class="text-lg font-bold">Upload your resume</h2>
                 <p class="text-sm text-slate-400 mt-1">
                   Drop a file or paste the text below. Extraction happens locally, nothing leaves your browser.
                 </p>
@@ -409,12 +419,12 @@
                   for="file-input"
                   class="block border-2 border-dashed border-slate-700 rounded-lg p-6 text-center cursor-pointer hover:border-violet-500"
                 >
-                  <input type="file" id="file-input" accept=".pdf,.docx,.txt" class="sr-only" />
+                  <input type="file" id="file-input" accept=".pdf,.docx,.txt" class="sr-only" aria-label="Upload resume file" />
                   <span class="block text-sm text-slate-300"
                     >Drop your resume here or <span class="underline text-violet-400">browse</span> (PDF, DOCX, TXT, max
                     5MB)</span
                   >
-                  <span id="upload-status" class="block text-xs text-emerald-400 mt-2" role="status"></span>
+                  <span id="upload-status" class="block text-xs text-emerald-400 mt-2" role="status" aria-live="polite"></span>
                 </label>
 
                 <div>
@@ -426,22 +436,23 @@
                     id="resume-text"
                     class="field h-40"
                     placeholder="Extracted text appears here, or paste it. Use headers like Experience, Projects, Skills, Education and bullet points."
+                    aria-describedby="resume-count"
                   ></textarea>
                 </div>
               </section>
 
-              <p id="form-error" role="alert" class="hidden text-sm text-rose-400"></p>
+              <p id="form-error" role="alert" class="hidden text-sm text-rose-400" aria-live="assertive"></p>
 
               <div class="flex justify-between">
-                <button id="step2-back" type="button" class="step-nav-btn">← Back</button>
-                <button id="step2-next" type="button" class="step-nav-btn step-nav-btn--primary">Continue →</button>
+                <button id="step2-back" type="button" class="step-nav-btn">&larr; Back</button>
+                <button id="step2-next" type="button" class="step-nav-btn step-nav-btn--primary">Continue &rarr;</button>
               </div>
             </div>
 
             <!-- ---- STEP 3: Add Job Description ---- -->
-            <div id="step-3" class="step-panel hidden space-y-6">
+            <div id="step-3" class="step-panel hidden space-y-6" role="tabpanel" aria-labelledby="step3-title">
               <div>
-                <h2 class="text-lg font-bold">Add the job description</h2>
+                <h2 id="step3-title" class="text-lg font-bold">Add the job description</h2>
                 <p class="text-sm text-slate-400 mt-1">Paste the JD to score keyword match against your resume.</p>
               </div>
 
@@ -456,20 +467,21 @@
                   id="jd-text"
                   class="field h-40"
                   placeholder="Without a JD you get a general ATS score, and tailoring only applies the template."
+                  aria-describedby="jd-count"
                 ></textarea>
               </section>
 
               <div class="flex justify-between">
-                <button id="step3-back" type="button" class="step-nav-btn">← Back</button>
-                <button id="step3-next" type="button" class="step-nav-btn step-nav-btn--primary">Continue →</button>
+                <button id="step3-back" type="button" class="step-nav-btn">&larr; Back</button>
+                <button id="step3-next" type="button" class="step-nav-btn step-nav-btn--primary">Continue &rarr;</button>
               </div>
             </div>
 
             <!-- ---- STEP 4: Analyze ---- -->
-            <div id="step-4" class="step-panel hidden space-y-6">
+            <div id="step-4" class="step-panel hidden space-y-6" role="tabpanel" aria-labelledby="step4-title">
               <div class="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                  <h2 class="text-lg font-bold">Analyze your resume</h2>
+                  <h2 id="step4-title" class="text-lg font-bold">Analyze your resume</h2>
                   <p class="text-sm text-slate-400 mt-1">Run the check to see your ATS score and report.</p>
                 </div>
                 <button
@@ -484,11 +496,12 @@
               <div
                 id="placeholder-result"
                 class="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center text-slate-400 min-h-[220px] flex items-center justify-center"
+                aria-live="polite"
               >
                 Your ATS report appears here after you click Analyze.
               </div>
 
-              <div id="analysis-result" class="hidden bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
+              <div id="analysis-result" class="hidden bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6" aria-live="polite">
                 <div class="flex items-center justify-between flex-wrap gap-3 border-b border-slate-800 pb-5">
                   <h3 class="font-bold text-base">Analysis Complete</h3>
                   <button
@@ -496,12 +509,12 @@
                     type="button"
                     class="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-semibold px-4 py-2 rounded-lg text-sm"
                   >
-                    Generate Tailored Resume →
+                    Generate Tailored Resume &rarr;
                   </button>
                 </div>
 
                 <div class="flex flex-col items-center">
-                  <div class="relative w-36 h-36 flex items-center justify-center">
+                  <div class="relative w-36 h-36 flex items-center justify-center" aria-hidden="true">
                     <svg class="w-full h-full -rotate-90" viewBox="0 0 144 144" role="img" aria-label="ATS score gauge">
                       <circle cx="72" cy="72" r="60" stroke="#1e293b" stroke-width="12" fill="none" />
                       <circle
@@ -518,9 +531,9 @@
                         style="transition: stroke-dashoffset 1s"
                       />
                     </svg>
-                    <span id="score-text" class="absolute text-3xl font-extrabold">0%</span>
+                    <span id="score-text" class="absolute text-3xl font-extrabold" aria-live="polite">0%</span>
                   </div>
-                  <h4 id="score-status" class="font-bold mt-3"></h4>
+                  <h4 id="score-status" class="font-bold mt-3" aria-live="polite"></h4>
                   <span
                     id="mode-badge"
                     class="text-xs mt-1 px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700"
@@ -532,13 +545,13 @@
                     <p class="text-xs text-slate-300 mb-2">
                       <span id="matched-label"></span> (<span id="matched-count">0</span>)
                     </p>
-                    <div id="matched-tags" class="flex flex-wrap gap-1.5"></div>
+                    <div id="matched-tags" class="flex flex-wrap gap-1.5" aria-label="Matched keywords"></div>
                   </div>
                   <div class="bg-slate-950 border border-slate-800 rounded-lg p-4">
                     <p class="text-xs text-slate-300 mb-2">
                       <span id="missing-label"></span> (<span id="missing-count">0</span>)
                     </p>
-                    <div id="missing-tags" class="flex flex-wrap gap-1.5"></div>
+                    <div id="missing-tags" class="flex flex-wrap gap-1.5" aria-label="Missing keywords"></div>
                   </div>
                 </div>
 
@@ -548,7 +561,7 @@
                   <p id="job-match-score"></p>
                   <p id="ats-readiness-score"></p>
                 </div>
-                <ul class="grid sm:grid-cols-2 gap-2 text-xs">
+                <ul class="grid sm:grid-cols-2 gap-2 text-xs" role="list" aria-label="Structure checks">
                   <li class="flex justify-between bg-slate-950 p-2.5 rounded border border-slate-800">
                     <span>Contact details (email/phone)</span><span id="chk-contact"></span>
                   </li>
@@ -564,17 +577,17 @@
                 </ul>
               </div>
 
-              <button id="step4-back" type="button" class="step-nav-btn">← Back</button>
+              <button id="step4-back" type="button" class="step-nav-btn">&larr; Back</button>
             </div>
 
             <!-- ---- STEP 5: Improve & Export ---- -->
-            <div id="step-5" class="step-panel hidden space-y-6">
+            <div id="step-5" class="step-panel hidden space-y-6" role="tabpanel" aria-labelledby="step5-title">
               <div class="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                  <h2 class="text-lg font-bold">Improve & build your resume</h2>
+                  <h2 id="step5-title" class="text-lg font-bold">Improve & build your resume</h2>
                   <p class="text-sm text-slate-400 mt-1">Choose a resume template, review the improved resume, then continue to your cover letter.</p>
                 </div>
-                <button id="step5-back" type="button" class="step-nav-btn">← Back to analysis</button>
+                <button id="step5-back" type="button" class="step-nav-btn">&larr; Back to analysis</button>
               </div>
 
               <section id="tailored-section" class="hidden space-y-4">
@@ -583,7 +596,7 @@
                     <h3 class="font-bold text-base">Choose Resume Template</h3>
                     <p class="text-sm text-slate-400 mt-1">Select the template you want for your final ATS-friendly resume.</p>
                   </div>
-                  <div id="template-picker" class="template-picker-card"></div>
+                  <div id="template-picker" class="template-picker-card" role="listbox" aria-label="Resume templates"></div>
                 </section>
 
                 <div
@@ -592,12 +605,12 @@
                   <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 mr-auto">
                     Tailored resume preview
                   </h3>
-                  <label class="flex items-center gap-1.5"
-                    ><input type="checkbox" id="highlight-toggle" class="accent-violet-500" checked /> Highlight
+                  <label class="flex items-center gap-1.5" title="Highlight matched keywords in the preview">
+                    <input type="checkbox" id="highlight-toggle" class="accent-violet-500" checked /> Highlight
                     keywords</label
                   >
-                  <label class="flex items-center gap-1.5"
-                    ><input type="checkbox" id="jd-only-toggle" class="accent-violet-500" /> Only JD-relevant
+                  <label class="flex items-center gap-1.5" title="Show only lines relevant to the job description">
+                    <input type="checkbox" id="jd-only-toggle" class="accent-violet-500" /> Only JD-relevant
                     lines</label
                   >
 
@@ -606,6 +619,7 @@
                       id="print-btn"
                       type="button"
                       class="bg-violet-600 hover:bg-violet-500 px-3 py-1.5 rounded-lg"
+                      aria-label="Print or save resume as PDF"
                     >
                       Print / Save as PDF
                     </button>
@@ -613,6 +627,7 @@
                       id="copy-btn"
                       type="button"
                       class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg"
+                      aria-label="Copy resume text to clipboard"
                     >
                       Copy text
                     </button>
@@ -620,48 +635,46 @@
                       id="download-btn"
                       type="button"
                       class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg"
+                      aria-label="Download resume as text file"
                     >
                       .txt
                     </button>
                   </div>
                 </div>
 
-                <div id="resume-page-scale"><div id="resume-page"></div></div>
+                <div id="resume-page-scale"><div id="resume-page" role="document" aria-label="Tailored resume preview"></div></div>
                 <textarea id="tailored-output" class="hidden" aria-hidden="true" tabindex="-1"></textarea>
                 <div class="bg-violet-950/20 border border-violet-500/20 rounded-xl p-5 space-y-3">
                   <div>
                     <h3 class="font-bold text-base">Next: Create your cover letter</h3>
                     <p class="text-sm text-slate-400 mt-1">Your cover letter will be generated automatically from the resume and, when available, the job description.</p>
                   </div>
-                  <button id="cover-letter-next" type="button" class="step-nav-btn step-nav-btn--primary">Continue to Cover Letter →</button>
+                  <button id="cover-letter-next" type="button" class="step-nav-btn step-nav-btn--primary">Continue to Cover Letter &rarr;</button>
                 </div>
 
-                <p class="text-xs text-amber-400 text-center">
-                  Re-read the result before submitting and check that no bullet landed under the wrong job or project.
-                </p>
+                <p class="text-xs text-amber-400 text-center">Re-read the result before submitting and check that no bullet landed under the wrong job or project.</p>
               </section>
             </div>
-          </div>
 
             <!-- ---- STEP 6: Cover Letter & Export ---- -->
-            <div id="step-6" class="step-panel hidden space-y-6">
+            <div id="step-6" class="step-panel hidden space-y-6" role="tabpanel" aria-labelledby="step6-title">
               <div class="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                  <h2 class="text-lg font-bold">Cover Letter & Export</h2>
+                  <h2 id="step6-title" class="text-lg font-bold">Cover Letter & Export</h2>
                   <p class="text-sm text-slate-400 mt-1">Your cover letter is generated from the information in your resume and the job description.</p>
                 </div>
-                <button id="step6-back" type="button" class="step-nav-btn">← Back to resume</button>
+                <button id="step6-back" type="button" class="step-nav-btn">&larr; Back to resume</button>
               </div>
 
               <section id="cover-letter-section" class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
                 <div class="flex items-center justify-between gap-3 flex-wrap">
                   <div>
                     <h3 class="font-bold text-base">Personalized Cover Letter</h3>
-                    <p class="text-sm text-slate-400 mt-1">Generated from your resume — no separate form is required.</p>
+                    <p class="text-sm text-slate-400 mt-1">Generated from your resume &mdash; no separate form is required.</p>
                   </div>
                   <button id="cover-letter-regenerate" type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 font-semibold px-4 py-2 rounded-lg text-sm">Regenerate</button>
                 </div>
-                <div id="cover-letter-status" class="hidden text-xs text-emerald-400" role="status"></div>
+                <div id="cover-letter-status" class="hidden text-xs text-emerald-400" role="status" aria-live="polite"></div>
                 <textarea id="cover-letter-output" class="field min-h-[420px]" aria-label="Generated cover letter"></textarea>
                 <div class="flex flex-wrap gap-2">
                   <button id="cover-letter-print" type="button" class="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-semibold px-4 py-2 rounded-lg text-sm">Print / Save Cover Letter as PDF</button>
@@ -678,11 +691,11 @@
                 </div>
                 <div class="grid sm:grid-cols-2 gap-3 text-sm">
                   <div class="bg-slate-950 border border-slate-800 rounded-lg p-4">
-                    <p class="font-semibold">✓ ATS-Friendly Resume</p>
+                    <p class="font-semibold">&check; ATS-Friendly Resume</p>
                     <p class="text-xs text-slate-400 mt-1">Selected template and improved content.</p>
                   </div>
                   <div class="bg-slate-950 border border-slate-800 rounded-lg p-4">
-                    <p class="font-semibold">✓ Personalized Cover Letter</p>
+                    <p class="font-semibold">&check; Personalized Cover Letter</p>
                     <p class="text-xs text-slate-400 mt-1">Generated directly from your resume.</p>
                   </div>
                 </div>
@@ -707,18 +720,19 @@
                 loading="lazy"
                 controlslist="nodownload nofullscreen noremoteplayback noplaybackrate"
                 disablepictureinpicture
+                aria-label="Product demo video"
               >
                 <source src="assets/DESHboardats.mp4.mp4" type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
-              <p class="text-xs text-slate-400 mt-2">A quick look at the upload → analyze → tailor flow.</p>
+              <p class="text-xs text-slate-400 mt-2">A quick look at the upload &rarr; analyze &rarr; tailor flow.</p>
             </div>
 
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
               <p class="text-sm font-bold mb-4">Quick Features</p>
               <ul class="space-y-3.5 text-sm">
                 <li class="flex gap-3">
-                  <span class="feature-dot"
+                  <span class="feature-dot" aria-hidden="true"
                     ><svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor" aria-hidden="true">
                       <path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" /></svg></span
                   ><span
@@ -727,7 +741,7 @@
                   >
                 </li>
                 <li class="flex gap-3">
-                  <span class="feature-dot"
+                  <span class="feature-dot" aria-hidden="true"
                     ><svg
                       viewBox="0 0 24 24"
                       class="w-4 h-4"
@@ -744,7 +758,7 @@
                   >
                 </li>
                 <li class="flex gap-3">
-                  <span class="feature-dot"
+                  <span class="feature-dot" aria-hidden="true"
                     ><svg
                       viewBox="0 0 24 24"
                       class="w-4 h-4"
@@ -760,12 +774,12 @@
                     ><span class="text-xs text-slate-400">Improve your resume quality</span></span
                   >
                 </li>
-                                <li class="flex gap-3">
-                  <span class="feature-dot"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4v16M4 12h16" stroke-linecap="round" /></svg></span>
+                <li class="flex gap-3">
+                  <span class="feature-dot" aria-hidden="true"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4v16M4 12h16" stroke-linecap="round" /></svg></span>
                   <span><span class="block font-semibold">Resume Improvement</span><span class="text-xs text-slate-400">Fix weak sections and improve your resume</span></span>
                 </li>
-<li class="flex gap-3">
-                  <span class="feature-dot"
+                <li class="flex gap-3">
+                  <span class="feature-dot" aria-hidden="true"
                     ><svg
                       viewBox="0 0 24 24"
                       class="w-4 h-4"
@@ -781,7 +795,7 @@
                   >
                 </li>
                 <li class="flex gap-3">
-                  <span class="feature-dot"
+                  <span class="feature-dot" aria-hidden="true"
                     ><svg
                       viewBox="0 0 24 24"
                       class="w-4 h-4"
@@ -802,7 +816,7 @@
                 </li>
               </ul>
               <div class="mt-4 pt-4 border-t border-slate-800 flex gap-3">
-                <span class="feature-dot"
+                <span class="feature-dot" aria-hidden="true"
                   ><svg
                     viewBox="0 0 24 24"
                     class="w-4 h-4"
@@ -815,7 +829,7 @@
                     <circle cx="12" cy="12" r="3" /></svg
                 ></span>
                 <p class="text-xs text-slate-400">
-                  <span class="text-slate-200 font-semibold">Better Resume</span> → More Opportunities. Your success is
+                  <span class="text-slate-200 font-semibold">Better Resume</span> &rarr; More Opportunities. Your success is
                   just one analysis away.
                 </p>
               </div>
