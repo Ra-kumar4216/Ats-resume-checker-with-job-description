@@ -1,1 +1,17 @@
-{"id":"minimal-serif","name":"Minimal Serif","description":"Centered name, serif body, thin grey heading rules.","bestFor":"Academic and conservative employers","style":{"font":"Georgia, 'Times New Roman', serif","accent":"#222222","basePx":11.5,"lineHeight":1.5,"headingTransform":"capitalize","headingRule":"1px solid #888888","nameAlign":"center","bullet":"circle"},"sectionOrder":["summary","skills","experience","projects","education","certifications"]}
+{
+  "id": "minimal-serif",
+  "name": "Minimal Serif",
+  "description": "Centered name, serif body, thin grey heading rules.",
+  "bestFor": "Academic and conservative employers",
+  "style": {
+    "font": "Georgia, 'Times New Roman', serif",
+    "accent": "#222222",
+    "basePx": 11.5,
+    "lineHeight": 1.5,
+    "headingTransform": "capitalize",
+    "headingRule": "1px solid #888888",
+    "nameAlign": "center",
+    "bullet": "circle"
+  },
+  "sectionOrder": ["summary", "skills", "experience", "projects", "education", "certifications"]
+}
