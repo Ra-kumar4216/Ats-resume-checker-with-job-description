@@ -282,14 +282,13 @@
       .join('\n');
   }
   async function readPdf(buf) {
-    // Use CDN with integrity hash for pdfjs-dist v4.4.168 (latest stable as of 2024)
+    // Use CDN for pdfjs-dist v4.8.69 (stable)
     const pdfjsLib = await loadScript(
-      'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.mjs',
-      'pdfjsLib',
-      'sha384-9oK9V4vJ7Q8Z9K8vJ7Q8Z9K8vJ7Q8Z9K8vJ7Q8Z9K8vJ7Q8Z9K8vJ7Q8Z9K8vJ7Q8'
+      'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build/pdf.min.mjs',
+      'pdfjsLib'
     );
     // Worker from same CDN
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build/pdf.worker.min.mjs';
     const pdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise; // CVE-2024-4367 mitigation
     if (pdf.numPages > MAX_PDF_PAGES) {
       pdf.destroy();
@@ -526,6 +525,31 @@
     const a = document.createElement('a'); a.href = url; a.download = 'cover-letter.txt'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
+  if ($('cover-letter-download-docx')) $('cover-letter-download-docx').addEventListener('click', async () => {
+    try {
+      const docxLib = await loadDocx();
+      if (!docxLib) throw new Error('docx library failed to load');
+      const { Document, Packer, Paragraph, TextRun, AlignmentType } = docxLib;
+      const lines = $('cover-letter-output').value.split('\n');
+      const children = lines.map(line => new Paragraph({
+        children: [new TextRun({ text: line, size: 24, font: 'Calibri, Arial, sans-serif' })],
+        spacing: { line: 276, after: 60 },
+        alignment: line.trim() === '' ? AlignmentType.LEFT : (line.includes('Dear') || line.includes('Sincerely') ? AlignmentType.LEFT : AlignmentType.LEFT),
+      }));
+      const doc = new Document({ sections: [{ properties: {}, children }] });
+      const blob = await docxLib.Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'cover-letter.docx';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      flash($('cover-letter-download-docx'), 'Downloaded!');
+    } catch (err) {
+      console.error('Cover letter DOCX export failed:', err);
+      showError('Failed to generate DOCX. Try printing to PDF instead.');
+    }
+  });
   let coverPrintMarker = null;
   function printCoverLetter() {
     syncCoverLetterPrintPage();
@@ -584,6 +608,109 @@
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
+  // ---- DOCX export ----
+  async function loadDocx() {
+    return loadScript('https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js', 'docx');
+  }
+  function buildDocxDocument(sections, template) {
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, TabStopType, TabStopPosition } = docx;
+    const style = template?.style || {};
+    const font = style.font || 'Calibri, Arial, sans-serif';
+    const accent = style.accent || '#111111';
+    const basePx = style.basePx || 11.5;
+    const lineHeight = style.lineHeight || 1.45;
+    const headingTransform = style.headingTransform || 'uppercase';
+    const headingRule = style.headingRule || '1.5px solid #1a1a1a';
+    const nameAlign = style.nameAlign || 'left';
+    const bulletChar = style.bullet === 'circle' ? '\u25CF' : '\u2022';
+
+    const children = [];
+    const addHeading = (text, level = HeadingLevel.HEADING_2) => {
+      children.push(new Paragraph({
+        text: headingTransform === 'uppercase' ? text.toUpperCase() : headingTransform === 'capitalize' ? text : text,
+        heading: level,
+        alignment: AlignmentType.LEFT,
+        spacing: { before: 200, after: 100 },
+        border: { bottom: { color: accent.replace('#', ''), style: BorderStyle.SINGLE, size: 6 } },
+      }));
+    };
+    const addParagraph = (text, options = {}) => {
+      children.push(new Paragraph({
+        children: [new TextRun({ text, font, size: Math.round(basePx * 2), color: '000000' })],
+        spacing: { line: Math.round(lineHeight * 240), before: 40, after: 40, ...options.spacing },
+        alignment: options.alignment,
+        indent: options.indent,
+        bullet: options.bullet,
+      }));
+    };
+
+    sections.forEach(section => {
+      if (section.key === 'header') {
+        const lines = section.lines.map(l => l.trim()).filter(Boolean);
+        if (!lines.length) return;
+        const [name, ...rest] = lines;
+        addParagraph(name, { alignment: nameAlign === 'center' ? AlignmentType.CENTER : AlignmentType.LEFT, spacing: { before: 0, after: 60, line: 280 } });
+        if (rest.length) {
+          addParagraph(rest.join(' · '), { alignment: nameAlign === 'center' ? AlignmentType.CENTER : AlignmentType.LEFT, spacing: { before: 0, after: 200, line: 240 } });
+        }
+        return;
+      }
+      const title = TITLES[section.key] || (section.title || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+      addHeading(title);
+      const lines = section.lines.map(l => l.trim()).filter(Boolean);
+      if (section.key === 'skills') {
+        lines.forEach(line => addParagraph(section.key === 'skills' ? line : ATS.stripBullets(line)));
+      } else if (section.key === 'summary') {
+        addParagraph(lines.join(' '));
+      } else {
+        const blocks = ATS.splitBlocks(section.lines);
+        blocks.forEach(block => {
+          block.header.map(h => h.trim()).filter(Boolean).forEach(header => {
+            const { title: blockTitle, date } = ATS.splitHeader(header);
+            if (!blockTitle && date) {
+              addParagraph(date, { alignment: AlignmentType.RIGHT, spacing: { before: 60, after: 40 } });
+            } else {
+              const datePart = date ? ` \u2014 ${date}` : '';
+              addParagraph(blockTitle + datePart, { spacing: { before: 100, after: 40 } });
+            }
+          });
+          block.bullets.map(ATS.stripBullets).filter(Boolean).forEach(bullet => {
+            addParagraph(bulletChar + ' ' + bullet, { bullet: { level: 0 }, indent: { left: 720, hanging: 360 }, spacing: { before: 20, after: 20, line: Math.round(lineHeight * 240) } });
+          });
+        });
+      }
+    });
+
+    return new Document({ sections: [{ properties: {}, children }] });
+  }
+  async function exportDocx() {
+    if (!confirmLossyExport()) return;
+    if (!tailored || !template) {
+      showError('Please generate a tailored resume first.');
+      return;
+    }
+    try {
+      const docxLib = await loadDocx();
+      if (!docxLib) throw new Error('docx library failed to load');
+      const doc = buildDocxDocument(tailored.sections, template);
+      const blob = await docxLib.Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'tailored-resume.docx';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      flash($('download-docx-btn'), 'Downloaded!');
+    } catch (err) {
+      console.error('DOCX export failed:', err);
+      showError('Failed to generate DOCX. Try printing to PDF instead.');
+    }
+  }
+  // Initialize DOCX button after DOM ready
+  setTimeout(() => {
+    const btn = $('download-docx-btn');
+    if (btn) btn.addEventListener('click', exportDocx);
+  }, 0);
   // ---- print ----
   let printMarker = null,
     printVpOriginal = null,
