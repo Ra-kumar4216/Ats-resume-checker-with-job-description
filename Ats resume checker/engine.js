@@ -62,9 +62,6 @@
     ['dotnet', '.net'],
     ['html5', 'html'],
     ['css3', 'css'],
-    // "ai"/"ml" are routed through their long canonical form because a bare
-    // 2-character token fails the 3-char minimum in isUsable() below (same
-    // reason node/nodejs redirect to "node.js" instead of staying bare).
     ['ai', 'artificial intelligence'],
     ['ml', 'machine learning'],
     ['llms', 'llm'],
@@ -109,7 +106,7 @@
 
   const esc = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-  const escHtml = s => String(s).replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
+  const escHtml = s => String(s).replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"').replace(/'/g, ''');
 
   const bounds = k => [/^[a-z0-9]/i.test(k) ? '\\b' : '(^|[^a-z0-9])', /[a-z0-9]$/i.test(k) ? '\\b' : '(?![a-z0-9])'];
 
@@ -139,7 +136,7 @@
   }
 
   // ============================================================
-  // KEYWORD VALIDATION
+  // KEYWORD VALIDATION (EXPORTED FOR TESTING)
   // ============================================================
 
   function isUsable(value) {
@@ -211,14 +208,6 @@
 
   // ============================================================
   // SPLIT MULTIPLE SKILLS
-  //
-  // Examples:
-  //
-  // Pandas and NumPy
-  // Python, Pandas, NumPy and SQL
-  // React / Node.js / MongoDB
-  // JavaScript & React
-  // Python or Django
   // ============================================================
 
   function splitSkillPhrase(value) {
@@ -302,15 +291,6 @@
 
     // ----------------------------------------------------------
     // 2. Multi-skill signal phrases
-    //
-    // IMPORTANT:
-    // Old buggy code:
-    //
-    // add(m[1].split(...)[0]);
-    //
-    // That only kept the FIRST skill.
-    //
-    // New code extracts ALL skills.
     // ----------------------------------------------------------
 
     const signalRegex =
@@ -332,10 +312,6 @@
 
     // ----------------------------------------------------------
     // 3. Explicit skill-list phrases
-    //
-    // Examples:
-    // Skills: Python, Pandas, NumPy, SQL
-    // Technologies: React, Node.js, MongoDB
     // ----------------------------------------------------------
 
     const listRegex =
@@ -351,16 +327,6 @@
 
     // ----------------------------------------------------------
     // 4. Handle direct "X and Y" skill patterns
-    //
-    // Example:
-    // "Pandas and NumPy are required"
-    //
-    // IMPORTANT: both tokens must start with a capital letter (real
-    // tool/library names are capitalized in JDs — React, NumPy, Svelte).
-    // Without this, the pattern also matched ordinary lowercase sentence
-    // grammar ("clearly and effectively", "independently and
-    // collaboratively", "Science or related field") and injected those as
-    // fake keywords. No /i flag on purpose — it must stay case-sensitive.
     // ----------------------------------------------------------
 
     const andPairRegex = /\b([A-Z][A-Za-z0-9+#.-]{1,30})\s+(?:and|or|\/|&)\s+([A-Z][A-Za-z0-9+#.-]{1,30})\b/g;
@@ -394,16 +360,6 @@
 
     // ----------------------------------------------------------
     // 6. Drop keywords that are a strict word-subset of a longer one
-    //
-    // A JD mentioning "Spring Boot" also makes the bare dictionary entry
-    // "spring" match (word-boundary substring), and "REST APIs and MySQL"
-    // can independently surface both "rest api" and a stray "api". Both are
-    // really one requirement counted twice, which inflates the denominator
-    // and can make an unrelated keyword falsely show as "missing". Drop the
-    // shorter keyword only when its words are an exact contiguous run
-    // inside the longer one (token-for-token, not a plain substring test —
-    // "sql" is not dropped just because "mysql" is present, since "mysql"
-    // is one token, not two).
     // ----------------------------------------------------------
 
     const candidates = [...found];
@@ -471,9 +427,12 @@
 
   const EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 
-  const PHONE_RE = /(?:\+?\d[\d ().-]{7,}\d)/g;
+  // FIXED: Non-global regex to avoid lastIndex mutation bug
+  const PHONE_RE = /(?:\+?\d[\d ().-]{7,}\d)/;
   function hasPhone(value) {
-    return [...String(value ?? '').matchAll(PHONE_RE)].some(([raw]) => {
+    const str = String(value ?? '');
+    const matches = str.matchAll(new RegExp(PHONE_RE.source, 'g'));
+    return [...matches].some(([raw]) => {
       const digits = raw.replace(/\D/g, '');
       if (digits.length < 10 || digits.length > 15) {
         return false;
@@ -552,15 +511,6 @@
       return direct[0];
     }
 
-    // Combined headers ("Experience & Projects", "Achievements &
-    // Certifications") name two things under one line. We can only tag a
-    // section with a single key, so without this the whole heading (and
-    // everything under it) went undetected and silently fell into
-    // whatever section came before it — which also meant its content never
-    // counted toward the experience/projects structure checks. Try each
-    // connector-separated part and use the first one that matches a known
-    // section; this only fires when the whole heading did not already
-    // match above, so plain single-topic headers are unaffected.
     const parts = n.split(/\s*(?:&|,|\/|\band\b)\s*/i).filter(Boolean);
 
     if (parts.length > 1) {
@@ -614,8 +564,6 @@
   const DETAIL_RE = /^\s*(?:(?:github|live|link|url)\s*:|(?:cgpa|gpa|aggregate|percentage|grade)\b)/i;
 
   function splitBlocks(lines) {
-    // PDFs hard-wrap long bullets. Glue a wrapped tail back onto its bullet
-    // so it is not mistaken for a new title/bullet.
     const t = [];
     let inBullet = false;
     let lastNonEmptyIndex = -1;
@@ -662,12 +610,6 @@
 
       const hasSig = !DETAIL_RE.test(line) && !bulleted && line.length < 160 && HEADER_SIG.test(line);
 
-      // Generalized rule: ANY plain line (no date/pipe/dash/year of its
-      // own) that is immediately followed by a real bulleted line is a
-      // title for that bullet group — regardless of what resume format
-      // produced it. Without this, a bare "Mehta AI" (no separators at
-      // all) followed by "- did X" silently merges into whatever block
-      // came before it instead of starting its own.
       const nextLine = nextNonEmpty[i];
 
       const isBareTitleBeforeBullets =
@@ -784,7 +726,6 @@
 
     const kept = items.filter(item => score(item, keywords) > 0);
 
-    // Return only the kept (matching) items, sorted by relevance
     const finalItems = kept.sort((a, b) => score(b, keywords) - score(a, keywords));
 
     return match ? `${match[1]}: ${finalItems.join(', ')}` : finalItems.join(', ');
@@ -875,12 +816,6 @@
 
         const [name, ...rest] = lines;
 
-        // Previously this kept ONLY the lines that matched a contact
-        // pattern (email/phone/URL) whenever at least one such line
-        // existed — so a location line like "Chennai, India" or a
-        // one-line tagline silently vanished from the rendered/printed
-        // resume the moment any real contact line was present. Keep
-        // every header line, in order.
         const show = rest
           .reduce((a, l) => {
             if (a.length && /[|,]\s*$/.test(a[a.length - 1])) {
@@ -929,9 +864,6 @@
             .filter(Boolean)
             .forEach(header => {
               const { title, date } = splitHeader(header);
-              // PDF/DOCX extraction can place a date on its own line. Do
-              // not create an empty flex title that pushes the date to the
-              // far right; preserve it as readable full-width metadata.
               if (!title && date) {
                 html += `<div class="cv-block-date-only">${escHtml(date)}</div>`;
                 return;
@@ -1004,11 +936,6 @@
   // ACTION VERBS
   // ============================================================
 
-  // The original list only had past-tense forms of ~30 verbs, and was
-  // missing common engineering-resume verbs entirely (deployed, integrated,
-  // engineered, collaborated, wrote, configured, maintained, debugged...).
-  // A real bullet like "Deployed a Spring Boot service" or "Wrote CRUD
-  // APIs" scored zero action verbs under the old list.
   const VERB_WORDS = [
     'managed',
     'manage',
@@ -1194,12 +1121,6 @@
       .split(/\n/)
       .filter(isBullet)
       .reduce((count, line) => count + (VERB_START.test(stripBullets(line)) ? 1 : 0), 0);
-    // The original only caught %, currency and "Nx" multipliers, so bullets
-    // like "500+ users", "cut runtime from 8s to 2s", or "12 team members"
-    // scored zero measurable results despite clearly having numbers. This
-    // adds counted units; it intentionally requires a unit word right after
-    // the number (not a bare number alone) so dates like "Mar 2026" and
-    // phone numbers are not miscounted as achievements.
     const QUANT_UNITS =
       'k|m|ms|s|sec|secs|seconds|min|mins|minutes|hrs?|hours?|days?|weeks?|months?|years?|users?|customers?|clients?|members?|requests?|records?|rows?|people|engineers?|developers?|teams?';
     const quant = (
@@ -1226,12 +1147,6 @@
 
       const missing = keywords.filter(keyword => !matched.includes(keyword));
 
-      // A keyword pasted into the Skills line counts for less than one
-      // actually demonstrated in Experience/Projects/Summary. Without this,
-      // a resume that just lists every JD keyword in one line with no real
-      // content behind it scores almost the same as an honest resume that
-      // proves each one — a plain word-search can't tell "know Docker" from
-      // "used Docker to ship a service serving 500 users".
       const bodyKeys = new Set(['experience', 'projects', 'summary']);
       const skillsText = sections
         .filter(section => section.key === 'skills')
@@ -1260,11 +1175,6 @@
         'content signals': Math.round(contentSignals * 100),
       };
 
-      // A resume that shares almost no keywords with the JD (wrong role
-      // entirely) can still score a moderate total from structure and
-      // content-quality points alone. That total is a fair writing-quality
-      // read but a misleading "match" read, so flag it separately rather
-      // than silently blending it into one number.
       const lowRelevance = keywords.length > 0 && weightedCoverage < 0.25;
 
       return {
@@ -1365,6 +1275,7 @@
   // ============================================================
 
   function firstMatch(text, regex) {
+    // Use matchAll to avoid global regex lastIndex issues
     const m = String(text || '').match(regex);
     return m ? String(m[1] || m[0]).trim() : '';
   }
@@ -1373,7 +1284,9 @@
     const text = String(resumeText || '').trim();
     const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
     const email = firstMatch(text, EMAIL_RE);
-    const phone = firstMatch(text, PHONE_RE);
+    // Use a fresh regex for phone to avoid global flag issues
+    const phoneMatch = text.match(new RegExp(PHONE_RE.source, 'g'));
+    const phone = phoneMatch ? phoneMatch[0] : '';
     const name = lines.find(line => {
       const clean = line.replace(/[^A-Za-z .'-]/g, ' ').replace(/\s+/g, ' ').trim();
       return clean && clean.split(/\s+/).length >= 2 && clean.split(/\s+/).length <= 5 &&
@@ -1417,27 +1330,27 @@
       : `I am writing to express my interest in software development opportunities at ${job.company}. I would welcome the opportunity to contribute my technical skills, project experience, and willingness to learn to your team.`;
 
     return [
-      profile.name,
-      profile.email || '',
-      profile.phone || '',
+      escHtml(profile.name),
+      escHtml(profile.email || ''),
+      escHtml(profile.phone || ''),
       '',
       `Dear Hiring Manager,`,
       '',
-      intro,
+      escHtml(intro),
       '',
-      skillLine + projectLine + experienceLine + educationLine,
+      escHtml(skillLine + projectLine + experienceLine + educationLine),
       '',
-      `I am particularly interested in an opportunity where I can continue developing as a software professional while contributing to meaningful products and working collaboratively with the team. I would be glad to discuss how my background could support ${jd ? `the ${job.title} role` : 'your team'}.`,
+      escHtml(`I am particularly interested in an opportunity where I can continue developing as a software professional while contributing to meaningful products and working collaboratively with the team. I would be glad to discuss how my background could support ${jd ? `the ${job.title} role` : 'your team'}.`),
       '',
-      `Thank you for considering my application. I look forward to the opportunity to discuss my qualifications further.`,
+      escHtml(`Thank you for considering my application. I look forward to the opportunity to discuss my qualifications further.`),
       '',
       `Sincerely,`,
-      profile.name,
+      escHtml(profile.name),
     ].filter((line, index, arr) => line !== '' || (index > 0 && arr[index - 1] !== '')).join('\n');
   }
 
   // ============================================================
-  // PUBLIC API
+  // PUBLIC API (EXPORT ALL FOR TESTING)
   // ============================================================
 
   return {
@@ -1467,7 +1380,21 @@
 
     isBullet,
 
+    // Exported for testing
+    isUsable,
+    canonicalize,
+    pattern,
+    norm,
+    esc,
+    escHtml,
     PHONE_RE,
     hasPhone,
+    EMAIL_RE,
+    STOP,
+    GENERIC,
+    CANONICAL,
+    VARIANTS,
+    VERB_WORDS,
+    VERB_START,
   };
 });
