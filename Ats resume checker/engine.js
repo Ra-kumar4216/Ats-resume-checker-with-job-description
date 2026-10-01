@@ -1361,6 +1361,82 @@
   }
 
   // ============================================================
+  // COVER LETTER GENERATOR
+  // ============================================================
+
+  function firstMatch(text, regex) {
+    const m = String(text || '').match(regex);
+    return m ? String(m[1] || m[0]).trim() : '';
+  }
+
+  function extractResumeProfile(resumeText) {
+    const text = String(resumeText || '').trim();
+    const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    const email = firstMatch(text, EMAIL_RE);
+    const phone = firstMatch(text, PHONE_RE);
+    const name = lines.find(line => {
+      const clean = line.replace(/[^A-Za-z .'-]/g, ' ').replace(/\s+/g, ' ').trim();
+      return clean && clean.split(/\s+/).length >= 2 && clean.split(/\s+/).length <= 5 &&
+        !/@/.test(clean) && !/\d/.test(clean) && !/^(resume|curriculum vitae|cv)$/i.test(clean);
+    }) || 'Candidate';
+
+    const sections = parseSections(text);
+    const skillsSection = sections.find(s => s.key === 'skills');
+    const skills = skillsSection ? skillsSection.lines.map(stripBullets).join(', ') : '';
+    const projectsSection = sections.find(s => s.key === 'projects');
+    const projects = projectsSection ? projectsSection.lines.filter(Boolean).map(stripBullets).slice(0, 3) : [];
+    const experienceSection = sections.find(s => s.key === 'experience');
+    const experience = experienceSection ? experienceSection.lines.filter(Boolean).map(stripBullets).slice(0, 4) : [];
+    const educationSection = sections.find(s => s.key === 'education');
+    const education = educationSection ? educationSection.lines.filter(Boolean).map(stripBullets).slice(0, 3) : [];
+
+    return { name, email, phone, skills, projects, experience, education };
+  }
+
+  function extractJobProfile(jd) {
+    const text = String(jd || '').trim();
+    const title = firstMatch(text, /(?:job\s*title|position|role)\s*[:\-]\s*([^\n|]{2,80})/i) ||
+      firstMatch(text, /(?:hiring|looking for|seeking)\s+(?:an?|the)?\s*([A-Za-z][A-Za-z .&/-]{2,70}?)(?:\s+(?:to|who|with|for)\b|[.\n])/i) ||
+      'the position';
+    const company = firstMatch(text, /(?:company|employer|organization)\s*[:\-]\s*([^\n|]{2,80})/i) || 'your organization';
+    return { title, company };
+  }
+
+  function generateCoverLetter(resumeText, jd = '') {
+    const profile = extractResumeProfile(resumeText);
+    const job = extractJobProfile(jd);
+    const keywords = jd ? extractKeywords(jd).filter(k => pattern(k).test(resumeText)).slice(0, 6) : [];
+    const skills = profile.skills ? profile.skills.split(/,|\||;/).map(s => s.trim()).filter(Boolean).slice(0, 5) : [];
+    const relevant = keywords.length ? keywords : skills;
+    const projectLine = profile.projects[0] ? ` Through my project work, including ${profile.projects[0].replace(/[.]+$/, '')}, I have applied these skills in practical, hands-on work.` : '';
+    const experienceLine = profile.experience[0] ? ` My experience also includes ${profile.experience[0].replace(/[.]+$/, '')}.` : '';
+    const educationLine = profile.education[0] ? ` I am currently building on my academic foundation through ${profile.education[0].replace(/[.]+$/, '')}.` : '';
+    const skillLine = relevant.length ? ` My background includes ${relevant.join(', ')}, which aligns with the capabilities relevant to this role.` : ' My background has given me a strong foundation in software development and problem solving.';
+    const intro = jd
+      ? `I am writing to express my interest in the ${job.title} opportunity at ${job.company}. Based on my background and the requirements described for this role, I believe my skills and project experience are relevant to the position.`
+      : `I am writing to express my interest in software development opportunities at ${job.company}. I would welcome the opportunity to contribute my technical skills, project experience, and willingness to learn to your team.`;
+
+    return [
+      profile.name,
+      profile.email || '',
+      profile.phone || '',
+      '',
+      `Dear Hiring Manager,`,
+      '',
+      intro,
+      '',
+      skillLine + projectLine + experienceLine + educationLine,
+      '',
+      `I am particularly interested in an opportunity where I can continue developing as a software professional while contributing to meaningful products and working collaboratively with the team. I would be glad to discuss how my background could support ${jd ? `the ${job.title} role` : 'your team'}.`,
+      '',
+      `Thank you for considering my application. I look forward to the opportunity to discuss my qualifications further.`,
+      '',
+      `Sincerely,`,
+      profile.name,
+    ].filter((line, index, arr) => line !== '' || (index > 0 && arr[index - 1] !== '')).join('\n');
+  }
+
+  // ============================================================
   // PUBLIC API
   // ============================================================
 
@@ -1380,6 +1456,8 @@
     tailor,
 
     analyze,
+
+    generateCoverLetter,
 
     renderHTML,
 
