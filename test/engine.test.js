@@ -359,3 +359,13 @@ test('launch: every local src/href/poster in index.html exists on disk (logo, vi
   assert.ok(local.includes('assets/logo.svg.png') && local.some(r => r.endsWith('.mp4')));
   local.forEach(r => assert.ok(fs.existsSync(path.join(root, r)), `missing file: ${r}`));
 });
+
+test('launch: sidebar and top navbar list all sections and every #anchor has a target', () => {
+  const ids = new Set([...indexHtml.matchAll(/id="([^"]+)"/g)].map(m => m[1]));
+  const hrefs = [...indexHtml.matchAll(/href="#([^"]+)"/g)].map(m => m[1]);
+  ['how-it-works', 'features', 'why-choose', 'video-guide'].forEach(id => {
+    assert.ok(ids.has(id), `missing section #${id}`);
+    assert.ok(hrefs.filter(h => h === id).length >= 2, `#${id} must be linked from sidebar and top navbar`);
+  });
+  hrefs.forEach(h => assert.ok(ids.has(h), `dead link #${h}`));
+});
