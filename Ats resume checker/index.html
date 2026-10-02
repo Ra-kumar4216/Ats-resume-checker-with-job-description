@@ -6,12 +6,10 @@
     <meta name="description" content="ATS Tracker Pro - Free browser-based resume analyzer and job description matcher. 100% private, no data leaves your browser." />
     <meta name="theme-color" content="#1e1b4b" />
     <!-- CSP meta tag for defense-in-depth (Vercel headers are primary) -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'" />
     <title>ATS Tracker Pro</title>
     <link rel="stylesheet" href="tailwind.generated.css" />
     <link rel="stylesheet" href="styles.css" />
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <style>
       /* ===== ANIMATIONS ===== */
       @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -119,7 +117,7 @@
       aria-label="App navigation"
     >
       <div class="flex items-center gap-2.5 px-2 mb-8">
-        <img src="assets/logo.svg.png" alt="" class="h-9 w-9 rounded-lg object-contain" />
+        <img src="assets/logo.png" alt="" class="h-9 w-9 rounded-lg object-contain" />
         <span class="font-extrabold text-lg leading-tight">ATS Tracker <span class="text-violet-400">Pro</span></span>
       </div>
 
@@ -159,7 +157,7 @@
       <header id="top" class="sticky top-0 z-30 border-b border-slate-800 bg-slate-950/85 backdrop-blur">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
           <div class="flex items-center gap-2 lg:hidden">
-            <img src="assets/logo.svg.png" alt="ATS Tracker Pro logo" class="h-8 w-8 rounded-lg object-contain" />
+            <img src="assets/logo.png" alt="ATS Tracker Pro logo" class="h-8 w-8 rounded-lg object-contain" />
             <span class="font-bold">ATS Tracker Pro</span>
           </div>
 
@@ -812,6 +810,7 @@
               <!-- Hidden print-ready cover letter page. It becomes the only visible page when printing the cover letter. -->
               <article id="cover-letter-print-page" aria-hidden="true"></article>
             </div>
+          </div>
 
           <!-- ================= RIGHT COLUMN (persistent) ================= -->
           <aside class="space-y-6">
@@ -820,6 +819,7 @@
               <video
                 class="w-full aspect-video rounded-lg border border-slate-800 bg-black"
                 controls
+                preload="none"
                 muted
                 loop
                 playsinline
@@ -829,7 +829,7 @@
                 disablepictureinpicture
                 aria-label="Product demo video"
               >
-                <source src="assets/DESHboardats.mp4.mp4" type="video/mp4" />
+                <source src="assets/dashboard-preview.mp4" type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
               <p class="text-xs text-slate-400 mt-2">A quick look at the upload &rarr; analyze &rarr; tailor flow.</p>
