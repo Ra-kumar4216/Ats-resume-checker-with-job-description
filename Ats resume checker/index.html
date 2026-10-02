@@ -8,6 +8,7 @@
     <!-- CSP meta tag for defense-in-depth (Vercel headers are primary) -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'" />
     <title>ATS Tracker Pro</title>
+    <link rel="icon" type="image/png" href="assets/logo.png" />
     <link rel="stylesheet" href="tailwind.generated.css" />
     <link rel="stylesheet" href="styles.css" />
     <style>
@@ -823,8 +824,7 @@
                 muted
                 loop
                 playsinline
-                preload="none"
-                loading="lazy"
+                poster="assets/dashboard-poster.jpg"
                 controlslist="nodownload nofullscreen noremoteplayback noplaybackrate"
                 disablepictureinpicture
                 aria-label="Product demo video"
