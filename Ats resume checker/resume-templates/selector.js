@@ -118,7 +118,7 @@
       description: 'Centered name, serif body, thin grey heading rules.',
       bestFor: 'Academic and conservative employers',
       style: {
-        font: "Georgia, 'Times New Roman', serif",
+        font: 'Georgia, \'Times New Roman\', serif',
         accent: '#222222',
         basePx: 11.5,
         lineHeight: 1.5,
@@ -196,7 +196,7 @@
     // Use inline templates as primary (works everywhere, no fetch needed)
     // Optionally try to fetch JSON files for custom templates
     const inlineTemplates = INLINE_TEMPLATES.map(t => ({ ...t }));
-    
+
     try {
       const base = baseUrl();
       const results = await Promise.allSettled(MANIFEST.map(filename => fetchTemplate(base + filename, filename)));
@@ -207,7 +207,7 @@
         const merged = inlineTemplates.map(t => fetchedMap.get(t.id) || t);
         // Add any fetched templates not in inline
         fetched.forEach(t => {
-          if (!inlineTemplates.some(it => it.id === t.id)) merged.push(t);
+          if (!inlineTemplates.some(it => it.id === t.id)) {merged.push(t);}
         });
         return merged;
       }
