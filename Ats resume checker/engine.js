@@ -106,7 +106,7 @@
 
   const esc = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-  const escHtml = s => String(s).replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"').replace(/'/g, ''');
+  const escHtml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
   const bounds = k => [/^[a-z0-9]/i.test(k) ? '\\b' : '(^|[^a-z0-9])', /[a-z0-9]$/i.test(k) ? '\\b' : '(?![a-z0-9])'];
 
@@ -187,7 +187,7 @@
     // Very short values are normally noise
     const compact = k.replace(/[^a-z0-9+#.]/g, '');
 
-    if (compact.length < 3 && !/^(c\+\+|c#|r)$/.test(k)) {
+    if (compact.length < 3 && !isDictionaryTerm && !/^(c\+\+|c#|r)$/.test(k)) {
       return false;
     }
 
@@ -283,8 +283,19 @@
         return !JD_STOPLIST.has(norm(variant)) && new RegExp(`(^|[^a-z0-9])${esc(titled)}(?![a-z0-9])`).test(source);
       });
     };
+    // Words that are also ordinary English / short names must be written like a
+    // proper noun in the JD ("React", "Go"); everything else (MongoDB, SQL, AWS,
+    // REST APIs, Node.js ...) is matched case-insensitively.
+    const AMBIGUOUS = new Set(['react', 'express', 'excel', 'swift', 'spring', 'rag', 'go', 'rust', 'ruby', 'rails', 'bash']);
+    // Employer / location lines are not skills ("Company: Acme & Sons").
+    const cleaned = source.replace(/^[ \t]*(?:company|employer|organi[sz]ation|location|address|about us)\s*[:-][^\n]*$/gim, ' ');
     KEYWORDS.forEach(keyword => {
-      if (capitalizedMention(keyword)) {
+      const key = canonicalize(keyword);
+      if (AMBIGUOUS.has(key)) {
+        if (capitalizedMention(keyword)) {
+          add(keyword);
+        }
+      } else if (pattern(keyword).test(cleaned)) {
         add(keyword);
       }
     });
@@ -294,11 +305,11 @@
     // ----------------------------------------------------------
 
     const signalRegex =
-      /(?:experience\s+(?:with|in)|knowledge\s+(?:of|in)|proficien(?:t|cy)\s+(?:in|with)|familiarity\s+(?:with|in)|skilled?\s+(?:in|with)|expertise\s+(?:in|with)|hands[-\s]?on\s+(?:with|experience\s+in)|strong\s+(?:knowledge|experience|background)\s+(?:in|with))\s+([^.;:\n]{2,160})/gi;
+      /(?:experience\s+(?:with|in)|knowledge\s+(?:of|in)|proficien(?:t|cy)\s+(?:in|with)|familiarity\s+(?:with|in)|skilled?\s+(?:in|with)|expertise\s+(?:in|with)|hands[-\s]?on\s+(?:with|experience\s+in)|strong\s+(?:knowledge|experience|background)\s+(?:in|with))\s+((?:[^.;:\n]|\.(?=[A-Za-z0-9+#])){2,160})/gi;
 
     let match;
 
-    while ((match = signalRegex.exec(source)) !== null) {
+    while ((match = signalRegex.exec(cleaned)) !== null) {
       const phrase = match[1]
         .replace(/\b(?:required|required\.|preferred|desired|bonus|plus|nice to have)\b/gi, ' ')
         .trim();
@@ -317,7 +328,7 @@
     const listRegex =
       /(?:skills?|technologies?|technical\s+skills?|tools?|frameworks?|libraries?|proficiencies?)\s*:\s*([^\n]+)/gi;
 
-    while ((match = listRegex.exec(source)) !== null) {
+    while ((match = listRegex.exec(cleaned)) !== null) {
       const parts = splitSkillPhrase(match[1]);
 
       parts.forEach(part => {
@@ -331,9 +342,13 @@
 
     const andPairRegex = /\b([A-Z][A-Za-z0-9+#.-]{1,30})\s+(?:and|or|\/|&)\s+([A-Z][A-Za-z0-9+#.-]{1,30})\b/g;
 
-    while ((match = andPairRegex.exec(source)) !== null) {
-      add(match[1]);
-      add(match[2]);
+    const inDictionary = value => KEYWORDS.some(entry => canonicalize(entry) === canonicalize(value));
+    while ((match = andPairRegex.exec(cleaned)) !== null) {
+      [match[1], match[2]].forEach(word => {
+        if (inDictionary(word)) {
+          add(word);
+        }
+      });
     }
 
     // ----------------------------------------------------------
@@ -342,7 +357,7 @@
 
     const freq = {};
 
-    const capitalizedWords = source.match(/\b[A-Z][A-Za-z0-9+#.-]{2,}\b/g) || [];
+    const capitalizedWords = cleaned.match(/\b[A-Z][A-Za-z0-9+#.-]{2,}\b/g) || [];
 
     capitalizedWords.forEach(word => {
       const k = norm(word);
@@ -353,7 +368,7 @@
     });
 
     Object.keys(freq).forEach(k => {
-      if (freq[k] >= 2 && !JD_STOPLIST.has(k)) {
+      if (freq[k] >= 2 && !JD_STOPLIST.has(k) && inDictionary(k)) {
         add(k);
       }
     });
@@ -429,20 +444,19 @@
 
   // FIXED: Non-global regex to avoid lastIndex mutation bug
   const PHONE_RE = /(?:\+?\d[\d ().-]{7,}\d)/;
-  function hasPhone(value) {
+  function findPhone(value) {
     const str = String(value ?? '');
-    const matches = str.matchAll(new RegExp(PHONE_RE.source, 'g'));
-    return [...matches].some(([raw]) => {
+    const hit = [...str.matchAll(new RegExp(PHONE_RE.source, 'g'))].find(([raw]) => {
       const digits = raw.replace(/\D/g, '');
       if (digits.length < 10 || digits.length > 15) {
         return false;
       }
-      if (/^\d{4}\s*[-–—]\s*\d{4}$/.test(raw.trim())) {
-        return false;
-      }
-      return true;
+      // date ranges such as "2024 - 2027"
+      return !/^\d{4}\s*[-–—]\s*\d{4}$/.test(raw.trim());
     });
+    return hit ? hit[0].trim() : '';
   }
+  const hasPhone = value => findPhone(value) !== '';
 
   // ============================================================
   // RESUME SECTIONS
@@ -746,9 +760,9 @@
       const lines =
         section.key === 'skills'
           ? byScore(
-              section.lines.filter(line => line.trim()),
-              keywords
-            )
+            section.lines.filter(line => line.trim()),
+            keywords
+          )
           : splitBlocks(section.lines).flatMap(block => [...block.header, ...byScore(block.bullets, keywords)]);
 
       return {
@@ -1284,9 +1298,7 @@
     const text = String(resumeText || '').trim();
     const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
     const email = firstMatch(text, EMAIL_RE);
-    // Use a fresh regex for phone to avoid global flag issues
-    const phoneMatch = text.match(new RegExp(PHONE_RE.source, 'g'));
-    const phone = phoneMatch ? phoneMatch[0] : '';
+    const phone = findPhone(text);
     const name = lines.find(line => {
       const clean = line.replace(/[^A-Za-z .'-]/g, ' ').replace(/\s+/g, ' ').trim();
       return clean && clean.split(/\s+/).length >= 2 && clean.split(/\s+/).length <= 5 &&
@@ -1308,10 +1320,10 @@
 
   function extractJobProfile(jd) {
     const text = String(jd || '').trim();
-    const title = firstMatch(text, /(?:job\s*title|position|role)\s*[:\-]\s*([^\n|]{2,80})/i) ||
+    const title = firstMatch(text, /(?:job\s*title|position|role)\s*[:-]\s*([^\n|]{2,80})/i) ||
       firstMatch(text, /(?:hiring|looking for|seeking)\s+(?:an?|the)?\s*([A-Za-z][A-Za-z .&/-]{2,70}?)(?:\s+(?:to|who|with|for)\b|[.\n])/i) ||
       'the position';
-    const company = firstMatch(text, /(?:company|employer|organization)\s*[:\-]\s*([^\n|]{2,80})/i) || 'your organization';
+    const company = firstMatch(text, /(?:company|employer|organization)\s*[:-]\s*([^\n|]{2,80})/i) || 'your organization';
     return { title, company };
   }
 
@@ -1330,22 +1342,21 @@
       : `I am writing to express my interest in software development opportunities at ${job.company}. I would welcome the opportunity to contribute my technical skills, project experience, and willingness to learn to your team.`;
 
     return [
-      escHtml(profile.name),
-      escHtml(profile.email || ''),
-      escHtml(profile.phone || ''),
+      profile.name,
+      [profile.email, profile.phone].filter(Boolean).join(' | '),
       '',
-      `Dear Hiring Manager,`,
+      'Dear Hiring Manager,',
       '',
-      escHtml(intro),
+      intro,
       '',
-      escHtml(skillLine + projectLine + experienceLine + educationLine),
+      (skillLine + projectLine + experienceLine + educationLine).trim(),
       '',
-      escHtml(`I am particularly interested in an opportunity where I can continue developing as a software professional while contributing to meaningful products and working collaboratively with the team. I would be glad to discuss how my background could support ${jd ? `the ${job.title} role` : 'your team'}.`),
+      `I am particularly interested in an opportunity where I can continue developing as a software professional while contributing to meaningful products and working collaboratively with the team. I would be glad to discuss how my background could support ${jd ? `the ${job.title} role` : 'your team'}.`,
       '',
-      escHtml(`Thank you for considering my application. I look forward to the opportunity to discuss my qualifications further.`),
+      'Thank you for considering my application. I look forward to the opportunity to discuss my qualifications further.',
       '',
-      `Sincerely,`,
-      escHtml(profile.name),
+      'Sincerely,',
+      profile.name,
     ].filter((line, index, arr) => line !== '' || (index > 0 && arr[index - 1] !== '')).join('\n');
   }
 
@@ -1379,6 +1390,10 @@
     stripBullets,
 
     isBullet,
+
+    TITLES,
+
+    findPhone,
 
     // Exported for testing
     isUsable,
