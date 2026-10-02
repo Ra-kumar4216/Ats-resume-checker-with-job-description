@@ -214,7 +214,7 @@ test('engine: quantify detection works for various units', () => {
 
 test('stepper: goTo clamps to valid range', () => {
   // This tests the internal logic by checking the source
-  assert.match(stepperSource, /Math\.max\(1, Math\.min\(5, n\)\)/);
+  assert.match(stepperSource, /Math\.max\(1, Math\.min\(6, n\)\)/);
 });
 
 test('stepper: skip3 logic for general mode', () => {
@@ -303,4 +303,51 @@ test('engine: lowRelevance flag set correctly', () => {
     'We need a Python developer with Django and Flask experience'
   );
   assert.equal(result.lowRelevance, true);
+});
+
+test('launch: escHtml escapes all five HTML characters', () => {
+  assert.equal(ATS.escHtml('<a href="x">&\'</a>'), '&lt;a href=&quot;x&quot;&gt;&amp;&#39;&lt;/a&gt;');
+});
+
+test('launch: JD keywords - dotted names, short skills, case variants, no company names', () => {
+  const jd = `Job Title: Java Developer
+Company: Acme & Sons
+Requirements: Experience with Java, Spring Boot, React, Docker, Kubernetes, AWS and Go.
+Must have Python and REST APIs. Knowledge of Node.js, MongoDB, SQL, Git.`;
+  const kw = ATS.extractKeywords(jd);
+  ['java', 'spring boot', 'react', 'docker', 'kubernetes', 'aws', 'go', 'python', 'rest api', 'node.js', 'mongodb', 'sql', 'git'].forEach(k =>
+    assert.ok(kw.includes(k), `missing keyword ${k}: ${kw.join(', ')}`)
+  );
+  assert.ok(!kw.includes('acme') && !kw.includes('sons') && !kw.includes('rest'));
+});
+
+test('launch: cover letter is plain text and uses a real phone number only', () => {
+  const resume = 'Ratan Kumar\nratan@example.com\nSkills\nJava, Spring Boot\nEducation\nBCA  2024 - 2027';
+  const letter = ATS.generateCoverLetter(resume, 'Job Title: Dev\nCompany: Acme & Sons\nExperience with Java.');
+  assert.match(letter, /Acme & Sons/);
+  assert.doesNotMatch(letter, /&amp;|&#39;|&quot;/);
+  assert.doesNotMatch(letter.split('\n').slice(0, 3).join('\n'), /2024/);
+  assert.equal(ATS.findPhone('Chennai 2024 - 2027'), '');
+  assert.equal(ATS.findPhone('Call +91 98765 43210 now'), '+91 98765 43210');
+});
+
+test('launch: engine exports TITLES for the DOCX export', () => {
+  assert.equal(ATS.TITLES.experience, 'Experience');
+});
+
+test('launch: no CDN scripts, vendored libs exist, wizard session keys are separate', () => {
+  const root = path.join(__dirname, '../Ats resume checker');
+  assert.doesNotMatch(appSource, /https?:\/\/cdn\./);
+  assert.doesNotMatch(indexHtml, /cdn\.jsdelivr/);
+  ['pdf.min.js', 'pdf.worker.min.js', 'mammoth.browser.min.js', 'docx.umd.js'].forEach(f =>
+    assert.ok(fs.existsSync(path.join(root, 'assets/vendor', f)), f)
+  );
+  assert.doesNotMatch(stepperSource, /ats-tracker-session-v1/);
+});
+
+test('launch: right rail <aside> is a sibling of the main column, not nested in it', () => {
+  const before = indexHtml.slice(0, indexHtml.indexOf('<aside class="space-y-6">'));
+  const opens = (before.slice(before.indexOf('<main')).match(/<div[\s>]/g) || []).length;
+  const closes = (before.slice(before.indexOf('<main')).match(/<\/div>/g) || []).length;
+  assert.equal(opens - closes, 1, 'only the grid wrapper may still be open before <aside>');
 });
