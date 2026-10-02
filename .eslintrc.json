@@ -18,27 +18,61 @@
     "sourceType": "script"
   },
   "rules": {
-    "indent": ["error", 2],
-    "linebreak-style": ["error", "unix"],
-    "quotes": ["error", "single"],
-    "semi": ["error", "always"],
-    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "indent": [
+      "error",
+      2
+    ],
+    "linebreak-style": [
+      "error",
+      "unix"
+    ],
+    "quotes": [
+      "error",
+      "single"
+    ],
+    "semi": [
+      "error",
+      "always"
+    ],
+    "no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_"
+      }
+    ],
     "no-console": "off",
-    "eqeqeq": ["error", "always"],
-    "curly": ["error", "all"],
+    "eqeqeq": [
+      "error",
+      "always"
+    ],
+    "curly": [
+      "error",
+      "all"
+    ],
     "no-var": "error",
     "prefer-const": "error",
     "no-trailing-spaces": "error",
-    "max-len": ["warn", { "code": 120 }],
+    "max-len": [
+      "warn",
+      {
+        "code": 120
+      }
+    ],
     "no-useless-escape": "error"
   },
   "overrides": [
     {
-      "files": ["**/*.test.js"],
+      "files": [
+        "**/*.test.js"
+      ],
       "env": {
         "node": true,
         "jest": true
       }
     }
+  ],
+  "ignorePatterns": [
+    "Ats resume checker/assets/vendor/",
+    "node_modules/"
   ]
 }
