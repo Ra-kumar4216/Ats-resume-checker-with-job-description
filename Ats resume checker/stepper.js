@@ -7,6 +7,7 @@
   const hero = $('hero');
   const dots = Array.prototype.slice.call(document.querySelectorAll('#wizard-progress [data-step]'));
 
+  const STEP_KEY = 'ats-tracker-step-v1'; // own key: app.js keeps resume/JD text under a different key
   let mode = null; // 'jd' | 'general' — set on step 1, decides whether step 3 is skipped
   let current = 1;
   let furthest = 1; // furthest step reached, so people can revisit but not skip ahead
@@ -45,13 +46,14 @@
     if (label) {
       label.textContent = 'Step ' + current + ' of 6';
     }
-    
+
     // Save current step to session
     try {
-      const state = JSON.parse(localStorage.getItem('ats-tracker-session-v1') || '{}');
+      const state = JSON.parse(localStorage.getItem(STEP_KEY) || '{}');
       state.currentStep = current;
       state.mode = mode;
-      localStorage.setItem('ats-tracker-session-v1', JSON.stringify(state));
+      state.timestamp = Date.now();
+      localStorage.setItem(STEP_KEY, JSON.stringify(state));
     } catch (e) {
       // ignore
     }
@@ -159,23 +161,42 @@
     });
   });
 
-  // Restore step from session on load
-  try {
-    const state = JSON.parse(localStorage.getItem('ats-tracker-session-v1') || '{}');
-    if (state.currentStep && state.mode) {
+  window.ATSStepper = { getMode: () => mode };
+
+  // Restore the step AFTER app.js has restored the saved resume/JD text (its DOMContentLoaded listener is registered first).
+  function restoreStep() {
+    try {
+      const state = JSON.parse(localStorage.getItem(STEP_KEY) || '{}');
+      if (!state.currentStep || !state.mode || Date.now() - (state.timestamp || 0) > 7 * 24 * 60 * 60 * 1000) {
+        return;
+      }
       mode = state.mode;
-      // Don't auto-advance past step 2 without resume, or step 3 without JD
       const resume = $('resume-text')?.value?.trim();
       const jd = $('jd-text')?.value?.trim();
-      let targetStep = state.currentStep;
-      if (targetStep > 2 && !resume) targetStep = 2;
-      if (targetStep > 3 && mode === 'jd' && !jd) targetStep = 3;
+      // Results are not persisted, so never restore past the Analyze step.
+      let targetStep = Math.min(state.currentStep, 4);
+      if (targetStep > 2 && !resume) {
+        targetStep = 2;
+      }
+      if (targetStep > 3 && mode === 'jd' && !jd) {
+        targetStep = 3;
+      }
+      if (targetStep === 3 && mode === 'general') {
+        targetStep = 4;
+      }
       if (targetStep > 1) {
         goTo(targetStep);
+      } else {
+        render();
       }
+    } catch (e) {
+      // ignore
     }
-  } catch (e) {
-    // ignore
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', restoreStep);
+  } else {
+    restoreStep();
   }
 
   render();
