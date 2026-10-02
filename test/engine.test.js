@@ -351,3 +351,11 @@ test('launch: right rail <aside> is a sibling of the main column, not nested in 
   const closes = (before.slice(before.indexOf('<main')).match(/<\/div>/g) || []).length;
   assert.equal(opens - closes, 1, 'only the grid wrapper may still be open before <aside>');
 });
+
+test('launch: every local src/href/poster in index.html exists on disk (logo, video, poster)', () => {
+  const root = path.join(__dirname, '../Ats resume checker');
+  const refs = [...indexHtml.matchAll(/(?:src|href|poster)="([^"#?]+)"/g)].map(m => m[1]);
+  const local = refs.filter(r => !/^(https?:|data:|mailto:)/.test(r));
+  assert.ok(local.includes('assets/logo.svg.png') && local.includes('assets/DESHboardats.mp4.mp4'));
+  local.forEach(r => assert.ok(fs.existsSync(path.join(root, r)), `missing file: ${r}`));
+});
