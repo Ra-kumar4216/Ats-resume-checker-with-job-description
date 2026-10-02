@@ -1,3 +1,4 @@
+/* global docx */
 /* UI wiring: upload, analyze, tailor, templates, cover letter and export. Logic lives in engine.js. */
 (function () {
   const $ = id => document.getElementById(id);
@@ -64,9 +65,9 @@
     $('tailored-section').classList.add('hidden');
     $('resume-page').replaceChildren();
     $('tailored-output').value = '';
-    if ($('cover-letter-result')) $('cover-letter-result').classList.add('hidden');
-    if ($('cover-letter-output')) $('cover-letter-output').value = '';
-    if ($('cover-letter-status')) $('cover-letter-status').textContent = '';
+    if ($('cover-letter-result')) {$('cover-letter-result').classList.add('hidden');}
+    if ($('cover-letter-output')) {$('cover-letter-output').value = '';}
+    if ($('cover-letter-status')) {$('cover-letter-status').textContent = '';}
   }
 
   // ---- localStorage session persistence ----
@@ -76,7 +77,7 @@
       const state = {
         resume: $('resume-text').value,
         jd: $('jd-text').value,
-        mode: window.ATSApp?.currentMode || 'jd',
+        mode: window.ATSStepper?.getMode?.() || 'jd',
         highlight: $('highlight-toggle')?.checked ?? true,
         jdOnly: $('jd-only-toggle')?.checked ?? false,
         templateId: template?.id || 'modern-blue',
@@ -90,7 +91,7 @@
   function loadSession() {
     try {
       const raw = localStorage.getItem(SESSION_KEY);
-      if (!raw) return null;
+      if (!raw) {return null;}
       const state = JSON.parse(raw);
       // Expire after 7 days
       if (Date.now() - state.timestamp > 7 * 24 * 60 * 60 * 1000) {
@@ -104,7 +105,7 @@
   }
   function restoreSession() {
     const state = loadSession();
-    if (!state) return;
+    if (!state) {return;}
     if (state.resume) {
       $('resume-text').value = state.resume;
       $('resume-text').dispatchEvent(new Event('input'));
@@ -112,11 +113,6 @@
     if (state.jd) {
       $('jd-text').value = state.jd;
       $('jd-text').dispatchEvent(new Event('input'));
-    }
-    if (state.mode === 'general') {
-      // Simulate clicking "Continue without JD"
-      const btn = $('continue-without-jd');
-      if (btn) btn.click();
     }
     if (state.highlight !== undefined && $('highlight-toggle')) {
       $('highlight-toggle').checked = state.highlight;
@@ -135,12 +131,12 @@
   }
   ['resume-text', 'jd-text', 'highlight-toggle', 'jd-only-toggle'].forEach(id => {
     const el = $(id);
-    if (el) el.addEventListener('input', scheduleSave);
+    if (el) {el.addEventListener('input', scheduleSave);}
   });
   // Also save on major actions
   ['analyze-btn', 'tailor-btn', 'cover-letter-btn', 'cover-letter-regenerate'].forEach(id => {
     const el = $(id);
-    if (el) el.addEventListener('click', saveSession);
+    if (el) {el.addEventListener('click', saveSession);}
   });
 
   // ---- upload ----
@@ -282,13 +278,9 @@
       .join('\n');
   }
   async function readPdf(buf) {
-    // Use CDN for pdfjs-dist v4.8.69 (stable)
-    const pdfjsLib = await loadScript(
-      'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build/pdf.min.mjs',
-      'pdfjsLib'
-    );
-    // Worker from same CDN
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build/pdf.worker.min.mjs';
+    // Vendored pdf.js (classic script, sets window.pdfjsLib) - no CDN, works with the strict CSP.
+    const pdfjsLib = await loadScript('assets/vendor/pdf.min.js', 'pdfjsLib');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.js';
     const pdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise; // CVE-2024-4367 mitigation
     if (pdf.numPages > MAX_PDF_PAGES) {
       pdf.destroy();
@@ -310,7 +302,7 @@
     return text;
   }
   async function readDocx(buf) {
-    const mammoth = await loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.7.0/mammoth.browser.min.js', 'mammoth');
+    const mammoth = await loadScript('assets/vendor/mammoth.browser.min.js', 'mammoth');
     const { value } = await mammoth.convertToHtml({ arrayBuffer: buf });
     const body = new DOMParser().parseFromString(value, 'text/html').body;
     const extract = el => {
@@ -488,7 +480,7 @@
   function syncCoverLetterPrintPage() {
     const source = $('cover-letter-output');
     const page = $('cover-letter-print-page');
-    if (!source || !page) return;
+    if (!source || !page) {return;}
     page.replaceChildren();
     const text = source.value.trim();
     text.split(/\n\s*\n/).filter(Boolean).forEach(paragraph => {
@@ -502,39 +494,39 @@
     const resume = $('resume-text').value.trim();
     const jd = $('jd-text').value.trim();
     const resumeError = validateResume();
-    if (resumeError) return showError(resumeError);
+    if (resumeError) {return showError(resumeError);}
     hideError();
     const letter = ATS.generateCoverLetter(resume, jd);
     $('cover-letter-output').value = letter;
-    if ($('cover-letter-result')) $('cover-letter-result').classList.remove('hidden');
+    if ($('cover-letter-result')) {$('cover-letter-result').classList.remove('hidden');}
     $('cover-letter-status').classList.remove('hidden');
     $('cover-letter-status').textContent = 'Generated automatically from your resume' + (jd ? ' and job description.' : '.');
     syncCoverLetterPrintPage();
     scheduleSave();
   }
-  if ($('cover-letter-btn')) $('cover-letter-btn').addEventListener('click', generateCoverLetterNow);
-  if ($('cover-letter-regenerate')) $('cover-letter-regenerate').addEventListener('click', generateCoverLetterNow);
-  if ($('cover-letter-output')) $('cover-letter-output').addEventListener('input', syncCoverLetterPrintPage);
-  if ($('cover-letter-copy')) $('cover-letter-copy').addEventListener('click', async e => {
+  if ($('cover-letter-btn')) {$('cover-letter-btn').addEventListener('click', generateCoverLetterNow);}
+  if ($('cover-letter-regenerate')) {$('cover-letter-regenerate').addEventListener('click', generateCoverLetterNow);}
+  if ($('cover-letter-output')) {$('cover-letter-output').addEventListener('input', syncCoverLetterPrintPage);}
+  if ($('cover-letter-copy')) {$('cover-letter-copy').addEventListener('click', async e => {
     try { await navigator.clipboard.writeText($('cover-letter-output').value); flash(e.target, 'Copied!'); }
     catch { showError('Clipboard blocked by the browser.'); }
-  });
-  if ($('cover-letter-download')) $('cover-letter-download').addEventListener('click', () => {
+  });}
+  if ($('cover-letter-download')) {$('cover-letter-download').addEventListener('click', () => {
     const blob = new Blob([$('cover-letter-output').value], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'cover-letter.txt'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-  });
-  if ($('cover-letter-download-docx')) $('cover-letter-download-docx').addEventListener('click', async () => {
+  });}
+  if ($('cover-letter-download-docx')) {$('cover-letter-download-docx').addEventListener('click', async () => {
     try {
       const docxLib = await loadDocx();
-      if (!docxLib) throw new Error('docx library failed to load');
+      if (!docxLib) {throw new Error('docx library failed to load');}
       const { Document, Packer, Paragraph, TextRun, AlignmentType } = docxLib;
       const lines = $('cover-letter-output').value.split('\n');
       const children = lines.map(line => new Paragraph({
-        children: [new TextRun({ text: line, size: 24, font: 'Calibri, Arial, sans-serif' })],
+        children: [new TextRun({ text: line, size: 24, font: 'Calibri' })],
         spacing: { line: 276, after: 60 },
-        alignment: line.trim() === '' ? AlignmentType.LEFT : (line.includes('Dear') || line.includes('Sincerely') ? AlignmentType.LEFT : AlignmentType.LEFT),
+        alignment: AlignmentType.LEFT,
       }));
       const doc = new Document({ sections: [{ properties: {}, children }] });
       const blob = await docxLib.Packer.toBlob(doc);
@@ -549,7 +541,7 @@
       console.error('Cover letter DOCX export failed:', err);
       showError('Failed to generate DOCX. Try printing to PDF instead.');
     }
-  });
+  });}
   let coverPrintMarker = null;
   function printCoverLetter() {
     syncCoverLetterPrintPage();
@@ -558,7 +550,7 @@
       syncCoverLetterPrintPage();
     }
     const page = $('cover-letter-print-page');
-    if (!page) return;
+    if (!page) {return;}
     const t = document.title;
     coverPrintMarker = document.createComment('cover-letter-print-anchor');
     page.before(coverPrintMarker);
@@ -577,8 +569,8 @@
     setTimeout(restore, 3000);
     requestAnimationFrame(() => requestAnimationFrame(window.print));
   }
-  if ($('cover-letter-print')) $('cover-letter-print').addEventListener('click', printCoverLetter);
-  if ($('step6-resume-pdf')) $('step6-resume-pdf').addEventListener('click', () => $('print-btn').click());
+  if ($('cover-letter-print')) {$('cover-letter-print').addEventListener('click', printCoverLetter);}
+  if ($('step6-resume-pdf')) {$('step6-resume-pdf').addEventListener('click', () => $('print-btn').click());}
 
   // ---- export ----
   function flash(btn, msg) {
@@ -610,19 +602,18 @@
   });
   // ---- DOCX export ----
   async function loadDocx() {
-    return loadScript('https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js', 'docx');
+    return loadScript('assets/vendor/docx.umd.js', 'docx');
   }
   function buildDocxDocument(sections, template) {
     const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, TabStopType, TabStopPosition } = docx;
     const style = template?.style || {};
-    const font = style.font || 'Calibri, Arial, sans-serif';
+    const font = String(style.font || 'Calibri').split(',')[0].replace(/['"]/g, '').trim() || 'Calibri';
     const accent = style.accent || '#111111';
     const basePx = style.basePx || 11.5;
     const lineHeight = style.lineHeight || 1.45;
     const headingTransform = style.headingTransform || 'uppercase';
     const headingRule = style.headingRule || '1.5px solid #1a1a1a';
     const nameAlign = style.nameAlign || 'left';
-    const bulletChar = style.bullet === 'circle' ? '\u25CF' : '\u2022';
 
     const children = [];
     const addHeading = (text, level = HeadingLevel.HEADING_2) => {
@@ -647,7 +638,7 @@
     sections.forEach(section => {
       if (section.key === 'header') {
         const lines = section.lines.map(l => l.trim()).filter(Boolean);
-        if (!lines.length) return;
+        if (!lines.length) {return;}
         const [name, ...rest] = lines;
         addParagraph(name, { alignment: nameAlign === 'center' ? AlignmentType.CENTER : AlignmentType.LEFT, spacing: { before: 0, after: 60, line: 280 } });
         if (rest.length) {
@@ -655,7 +646,7 @@
         }
         return;
       }
-      const title = TITLES[section.key] || (section.title || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+      const title = ATS.TITLES[section.key] || (section.title || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
       addHeading(title);
       const lines = section.lines.map(l => l.trim()).filter(Boolean);
       if (section.key === 'skills') {
@@ -675,7 +666,7 @@
             }
           });
           block.bullets.map(ATS.stripBullets).filter(Boolean).forEach(bullet => {
-            addParagraph(bulletChar + ' ' + bullet, { bullet: { level: 0 }, indent: { left: 720, hanging: 360 }, spacing: { before: 20, after: 20, line: Math.round(lineHeight * 240) } });
+            addParagraph(bullet, { bullet: { level: 0 }, indent: { left: 720, hanging: 360 }, spacing: { before: 20, after: 20, line: Math.round(lineHeight * 240) } });
           });
         });
       }
@@ -684,14 +675,14 @@
     return new Document({ sections: [{ properties: {}, children }] });
   }
   async function exportDocx() {
-    if (!confirmLossyExport()) return;
+    if (!confirmLossyExport()) {return;}
     if (!tailored || !template) {
       showError('Please generate a tailored resume first.');
       return;
     }
     try {
       const docxLib = await loadDocx();
-      if (!docxLib) throw new Error('docx library failed to load');
+      if (!docxLib) {throw new Error('docx library failed to load');}
       const doc = buildDocxDocument(tailored.sections, template);
       const blob = await docxLib.Packer.toBlob(doc);
       const url = URL.createObjectURL(blob);
@@ -709,7 +700,7 @@
   // Initialize DOCX button after DOM ready
   setTimeout(() => {
     const btn = $('download-docx-btn');
-    if (btn) btn.addEventListener('click', exportDocx);
+    if (btn) {btn.addEventListener('click', exportDocx);}
   }, 0);
   // ---- print ----
   let printMarker = null,
