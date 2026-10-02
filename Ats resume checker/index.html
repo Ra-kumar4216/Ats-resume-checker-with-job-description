@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -130,6 +130,18 @@
           </svg>
           <span><span class="block">Analyzer</span><span class="side-nav-sub">Check your match score</span></span>
         </a>
+        <a href="#how-it-works" class="side-nav-item">
+          <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m10 8.5 5 3.5-5 3.5Z" /></svg>
+          <span><span class="block">How it works</span><span class="side-nav-sub">4 simple steps + video</span></span>
+        </a>
+        <a href="#features" class="side-nav-item">
+          <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.5 6.6 19.5l1.2-6L3.3 9.3l6.1-.7Z" /></svg>
+          <span><span class="block">Features</span><span class="side-nav-sub">What you can do here</span></span>
+        </a>
+        <a href="#why-choose" class="side-nav-item">
+          <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3 20 7v5c0 4.6-3.1 7.7-8 9-4.9-1.3-8-4.4-8-9V7l8-4Z" /><path d="m9 12 2 2 4-4" /></svg>
+          <span><span class="block">Why choose us</span><span class="side-nav-sub">Free, private, no sign-up</span></span>
+        </a>
       </nav>
 
       <div class="rounded-xl border border-emerald-800/40 bg-emerald-900/10 p-4 flex gap-3">
@@ -164,6 +176,9 @@
 
           <nav class="hidden md:flex items-center gap-7 text-sm font-medium mx-auto" aria-label="Primary">
             <a href="#top" class="text-violet-300 border-b-2 border-violet-400 pb-1">Analyzer</a>
+            <a href="#how-it-works" class="text-slate-400 hover:text-violet-300 border-b-2 border-transparent pb-1">How it works</a>
+            <a href="#features" class="text-slate-400 hover:text-violet-300 border-b-2 border-transparent pb-1">Features</a>
+            <a href="#why-choose" class="text-slate-400 hover:text-violet-300 border-b-2 border-transparent pb-1">Why choose us</a>
           </nav>
 
           <div class="flex items-center gap-2.5">
@@ -811,16 +826,53 @@
               <!-- Hidden print-ready cover letter page. It becomes the only visible page when printing the cover letter. -->
               <article id="cover-letter-print-page" aria-hidden="true"></article>
             </div>
+
+            <!-- ---- How it works (written steps; the video is in the right column) ---- -->
+            <section id="how-it-works" class="scroll-mt-24 space-y-4 rounded-xl border border-slate-800 bg-slate-900 p-6">
+              <h2 class="text-lg font-bold">How it works</h2>
+              <p class="text-sm text-slate-400">Four simple steps. Everything runs in your browser, nothing is uploaded to a server.</p>
+              <ol class="grid gap-5 sm:grid-cols-2">
+              <li class="flex gap-3">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-600 text-sm font-bold text-white">1</span>
+                <div>
+                  <p class="text-sm font-semibold">Choose mode and add your resume</p>
+                  <p class="mt-0.5 text-xs text-slate-400">Pick "with job description" or a general check, then upload a PDF, DOCX or TXT file, or paste your resume text.</p>
+                </div>
+              </li>
+              <li class="flex gap-3">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-600 text-sm font-bold text-white">2</span>
+                <div>
+                  <p class="text-sm font-semibold">Paste the job description</p>
+                  <p class="mt-0.5 text-xs text-slate-400">Copy the job post into the box. Skip this step if you only want a general ATS check.</p>
+                </div>
+              </li>
+              <li class="flex gap-3">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-600 text-sm font-bold text-white">3</span>
+                <div>
+                  <p class="text-sm font-semibold">Analyze</p>
+                  <p class="mt-0.5 text-xs text-slate-400">Click Analyze to see your match score, the keywords you already have and the ones that are missing.</p>
+                </div>
+              </li>
+              <li class="flex gap-3">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-600 text-sm font-bold text-white">4</span>
+                <div>
+                  <p class="text-sm font-semibold">Improve, download and apply</p>
+                  <p class="mt-0.5 text-xs text-slate-400">Tailor the resume, pick a template, download it as PDF or DOCX and generate a matching cover letter.</p>
+                </div>
+              </li>
+              </ol>
+              <p class="text-xs text-slate-500">Prefer to watch? See the Product preview video next to this page.</p>
+            </section>
           </div>
 
           <!-- ================= RIGHT COLUMN (persistent) ================= -->
           <aside class="space-y-6">
-            <div id="video-guide" class="bg-slate-900 border border-slate-800 rounded-xl p-4 hover-lift animate-fade-in-up">
+            <div id="video-guide" class="scroll-mt-24 bg-slate-900 border border-slate-800 rounded-xl p-4 hover-lift animate-fade-in-up">
               <p class="text-sm font-bold mb-3">Product preview</p>
               <video
                 class="w-full aspect-video rounded-lg border border-slate-800 bg-black"
                 controls
-                preload="none"
+                preload="metadata"
                 muted
                 loop
                 playsinline
@@ -832,10 +884,10 @@
                 <source src="assets/DESHboardatsmp4.mp4" type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
-              <p class="text-xs text-slate-400 mt-2">A quick look at the upload &rarr; analyze &rarr; tailor flow.</p>
+              <p class="text-xs text-slate-400 mt-2">A quick look at the upload &rarr; analyze &rarr; tailor flow. <a href="assets/DESHboardatsmp4.mp4" target="_blank" rel="noopener" class="underline text-violet-300 hover:text-violet-200">Open video in a new tab</a></p>
             </div>
 
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 hover-lift animate-fade-in-up stagger-1">
+            <div id="features" class="scroll-mt-24 bg-slate-900 border border-slate-800 rounded-xl p-5 hover-lift animate-fade-in-up stagger-1">
               <p class="text-sm font-bold mb-4">Quick Features</p>
               <ul class="space-y-3.5 text-sm">
                 <li class="flex gap-3 hover-lift animate-fade-in stagger-1">
@@ -942,7 +994,7 @@
               </div>
             </div>
 
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <div id="why-choose" class="scroll-mt-24 bg-slate-900 border border-slate-800 rounded-xl p-5">
               <p class="text-sm font-bold mb-3">Why Choose ATS Tracker Pro?</p>
               <ul class="space-y-2.5 text-sm text-slate-300">
                 <li class="flex items-start gap-2">
