@@ -13,6 +13,30 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,
 #resume-page-scale{overflow:hidden}
 #resume-page{background:#fff;color:#1a1a1a;font-family:var(--cv-font,Calibri,Arial,sans-serif);line-height:var(--cv-line-height,1.45);max-width:700px;margin:0 auto;padding:36px 40px;border-radius:6px}
 #resume-page .cv-name{font-size:24px;font-weight:700;color:var(--cv-accent,#1d4ed8);text-align:var(--cv-name-align,left);margin-bottom:3px}
+#resume-page .cv-nw{white-space:nowrap}
+
+/* Templates with icons: contact row, one icon per item (vector SVG, no text for ATS parsers) */
+#resume-page .cv-contact-icons{display:flex;flex-wrap:wrap;gap:3px 14px;text-align:left;color:#444}
+#resume-page .cv-ci{display:inline-flex;align-items:center;gap:5px}
+#resume-page .cv-icon{width:11px;height:11px;flex:none;color:var(--cv-accent,#1d4ed8)}
+#resume-page .cv-tagline{font-size:12px;color:#333;margin:0 0 4px;text-align:var(--cv-name-align,left)}
+
+/* Two-column templates: main column comes first in the document (text order for ATS parsers); CSS grid puts the
+   shaded sidebar on the chosen side. */
+#resume-page .cv-cols{display:grid;grid-template-columns:minmax(0,1fr) 31%;column-gap:20px;align-items:start;margin-top:4px}
+#resume-page .cv-cols .cv-main{grid-column:1;grid-row:1;min-width:0}
+#resume-page .cv-cols .cv-side{grid-column:2;grid-row:1;min-width:0}
+#resume-page .cv-cols.cv-side-left{grid-template-columns:31% minmax(0,1fr)}
+#resume-page .cv-cols.cv-side-left .cv-main{grid-column:2}
+#resume-page .cv-cols.cv-side-left .cv-side{grid-column:1}
+#resume-page .cv-side{background:var(--cv-side-bg,#f1f5f9);padding:2px 12px 12px;border-radius:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+#resume-page .cv-side .cv-section:first-child{margin-top:8px}
+#resume-page .cv-side .cv-section-title{font-size:11.5px}
+#resume-page .cv-side .cv-block-header-row{flex-direction:column;align-items:flex-start;gap:0}
+#resume-page .cv-side .cv-block-date{white-space:normal}
+#resume-page .cv-side .cv-skills-line{overflow-wrap:anywhere}
+#resume-page .cv-block-sub-title{font-style:italic;font-weight:400}
+#resume-page .cv-block-sub{font-style:italic;font-size:.95em;margin:0 0 3px}
 #resume-page .cv-contact{font-size:11px;color:#555;text-align:var(--cv-name-align,left);margin-bottom:14px}
 #resume-page .cv-section{margin-top:14px}
 #resume-page .cv-section-title{font-size:12.5px;font-weight:700;letter-spacing:.7px;text-transform:var(--cv-heading-transform,uppercase);border-bottom:var(--cv-heading-rule,1.5px solid #1a1a1a);padding-bottom:2px;margin-bottom:6px}
