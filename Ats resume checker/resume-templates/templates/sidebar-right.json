@@ -1,0 +1,32 @@
+{
+  "id": "sidebar-right",
+  "name": "Two-Column, Right Sidebar",
+  "description": "Main column on the left; a shaded right column for skills, education and certifications.",
+  "bestFor": "Experience-first resumes (some strict ATS misread columns)",
+  "style": {
+    "font": "Arial, Helvetica, sans-serif",
+    "accent": "#111111",
+    "basePx": 11,
+    "lineHeight": 1.4,
+    "headingTransform": "uppercase",
+    "headingRule": "1px solid #1a1a1a",
+    "nameAlign": "left",
+    "bullet": "disc"
+  },
+  "layout": "sidebar-right",
+  "sidebar": [
+    "skills",
+    "education",
+    "certifications"
+  ],
+  "icons": true,
+  "iconColor": "#111111",
+  "sectionOrder": [
+    "summary",
+    "experience",
+    "projects",
+    "education",
+    "skills",
+    "certifications"
+  ]
+}
