@@ -27,6 +27,9 @@
     'fresher-projects-first.json',
     'compact-one-page.json',
     'minimal-serif.json',
+    'sidebar-left.json',
+    'sidebar-right.json',
+    'modern-icons.json',
   ];
 
   const STYLE_KEYS = [
@@ -129,6 +132,69 @@
       },
       sectionOrder: ['summary', 'skills', 'experience', 'projects', 'education', 'certifications'],
     },
+    {
+      id: 'sidebar-left',
+      name: 'Two-Column Sidebar',
+      description: 'Name and contact icons on top; skills, education and certifications in a shaded left column.',
+      bestFor: 'Design-aware roles (some strict ATS misread columns)',
+      style: {
+        font: 'Calibri, Arial, sans-serif',
+        accent: '#1d4ed8',
+        basePx: 11,
+        lineHeight: 1.4,
+        headingTransform: 'uppercase',
+        headingRule: '1.5px solid #1d4ed8',
+        nameAlign: 'left',
+        bullet: 'disc',
+      },
+      layout: 'sidebar-left',
+      sidebar: ['skills', 'education', 'certifications'],
+      icons: true,
+      iconColor: '#1d4ed8',
+      sectionOrder: ['summary', 'experience', 'projects', 'education', 'skills', 'certifications'],
+    },
+    {
+      id: 'sidebar-right',
+      name: 'Two-Column, Right Sidebar',
+      description: 'Main column on the left; a shaded right column for skills, education and certifications.',
+      bestFor: 'Experience-first resumes (some strict ATS misread columns)',
+      style: {
+        font: 'Arial, Helvetica, sans-serif',
+        accent: '#111111',
+        basePx: 11,
+        lineHeight: 1.4,
+        headingTransform: 'uppercase',
+        headingRule: '1px solid #1a1a1a',
+        nameAlign: 'left',
+        bullet: 'disc',
+      },
+      layout: 'sidebar-right',
+      sidebar: ['skills', 'education', 'certifications'],
+      icons: true,
+      iconColor: '#111111',
+      sectionOrder: ['summary', 'experience', 'projects', 'education', 'skills', 'certifications'],
+    },
+    {
+      id: 'modern-icons',
+      name: 'Modern with Icons',
+      description: 'Single column like Modern Blue, with an icon in front of email, phone, location and profile links.',
+      bestFor: 'Single-column resumes that still show contact icons',
+      style: {
+        font: 'Calibri, Arial, sans-serif',
+        accent: '#1d4ed8',
+        basePx: 11.5,
+        lineHeight: 1.45,
+        headingTransform: 'uppercase',
+        headingRule: '1.5px solid #1d4ed8',
+        nameAlign: 'left',
+        bullet: 'disc',
+      },
+      layout: 'single',
+      sidebar: [],
+      icons: true,
+      iconColor: '#1d4ed8',
+      sectionOrder: ['summary', 'skills', 'experience', 'projects', 'education', 'certifications'],
+    },
   ];
 
   // Used only if fetching the JSON files fails entirely (e.g. opened via file://).
@@ -217,8 +283,26 @@
     return inlineTemplates;
   }
 
+  // Optional fields get safe defaults so older / hand-written templates keep working.
+  function normalize(tpl) {
+    const layout = ['single', 'sidebar-left', 'sidebar-right'].includes(tpl.layout) ? tpl.layout : 'single';
+    return {
+      ...tpl,
+      layout,
+      sidebar: Array.isArray(tpl.sidebar) ? tpl.sidebar : [],
+      icons: tpl.icons === true,
+      iconColor: typeof tpl.iconColor === 'string' ? tpl.iconColor : tpl.style.accent,
+    };
+  }
+
+  // What engine.renderHTML needs to draw the selected format.
+  function renderOptions(tpl) {
+    const t = normalize(tpl || FALLBACK_TEMPLATE);
+    return { layout: t.layout, sidebar: t.sidebar.length ? t.sidebar : undefined, icons: t.icons };
+  }
+
   function getTemplate(list, id) {
-    return list.find(t => t.id === id) || list[0];
+    return normalize(list.find(t => t.id === id) || list[0]);
   }
 
   // Header stays first; known sections follow template order; unknown keys keep their original order at the end.
@@ -242,6 +326,7 @@
     set('--cv-name-align', st.nameAlign);
     set('--cv-bullet', st.bullet);
     el.dataset.template = tpl.id;
+    el.dataset.layout = normalize(tpl).layout;
   }
 
   function mountSelector(container, list, onChange) {
@@ -262,6 +347,8 @@
     MANIFEST,
     loadTemplates,
     getTemplate,
+    normalize,
+    renderOptions,
     orderSections,
     applyTemplate,
     mountSelector,
