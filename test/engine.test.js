@@ -90,7 +90,8 @@ test('acceptance: date-only extracted lines do not render as empty right-aligned
     [{ key: 'education', title: 'Education', lines: ['Bachelor of Computer Applications', '2021'] }],
     []
   );
-  assert.match(html, /cv-block-date-only/);
+  // the date joins the line above it; it is never an empty title with a right-aligned date
+  assert.match(html, /cv-block-title">Bachelor of Computer Applications<\/span><span class="cv-block-date">2021/);
   assert.doesNotMatch(html, /cv-block-title"><\/span><span class="cv-block-date">2021/);
 });
 
@@ -363,9 +364,336 @@ test('launch: every local src/href/poster in index.html exists on disk (logo, vi
 test('launch: sidebar and top navbar list all sections and every #anchor has a target', () => {
   const ids = new Set([...indexHtml.matchAll(/id="([^"]+)"/g)].map(m => m[1]));
   const hrefs = [...indexHtml.matchAll(/href="#([^"]+)"/g)].map(m => m[1]);
-  ['how-it-works', 'features', 'why-choose', 'video-guide'].forEach(id => {
+  ['how-it-works', 'features', 'why-choose'].forEach(id => {
+    assert.ok(ids.has('video-guide'), 'video card must keep its #video-guide anchor');
     assert.ok(ids.has(id), `missing section #${id}`);
     assert.ok(hrefs.filter(h => h === id).length >= 2, `#${id} must be linked from sidebar and top navbar`);
   });
   hrefs.forEach(h => assert.ok(ids.has(h), `dead link #${h}`));
+});
+
+// ---------------------------------------------------------------------------
+// Real-resume regressions (small-caps PDFs, icon glyphs, LinkedIn two-column PDF)
+// ---------------------------------------------------------------------------
+test('pdf text: small-caps splits are repaired and section headings are found', () => {
+  const text = 'R ATAN   K UMAR\nP ROFESSIONAL   S UMMARY\nBuilds apps.\nT ECHNICAL   S KILLS\nJava, Python\nP ROJECTS\nA CHIEVEMENTS & A DDITIONAL I NFORMATION\nOpen source';
+  const clean = ATS.cleanExtractedText(text).split('\n');
+  assert.deepEqual(clean.slice(0, 2), ['RATAN KUMAR', 'PROFESSIONAL SUMMARY']);
+  assert.ok(clean.includes('ACHIEVEMENTS & ADDITIONAL INFORMATION'));
+  const keys = ATS.parseSections(text).map(sec => sec.key);
+  ['summary', 'skills', 'projects', 'other'].forEach(k => assert.ok(keys.includes(k), `missing section ${k}: ${keys}`));
+  // real English is left alone
+  assert.equal(ATS.cleanExtractedText('I AM READY'), 'I AM READY');
+});
+
+test('pdf text: icon glyphs, page footers and wrapped URLs are cleaned', () => {
+  const text = '§   github.com/Aayush-code11   ï   linkedin.com/in/aayush-raj-069139361\nOnline Job Portal System   §\nwww.linkedin.com/in/ratan-kumar-\nmetha   (LinkedIn)\ngithub.com/\nRa-kumar4216\nPage   2   of   3\n1';
+  const out = ATS.cleanExtractedText(text);
+  assert.doesNotMatch(out, /[§ï]/);
+  assert.match(out, /^github\.com\/Aayush-code11 \| linkedin\.com\/in\/aayush-raj-069139361$/m);
+  assert.match(out, /^www\.linkedin\.com\/in\/ratan-kumar-metha$/m);
+  assert.match(out, /^github\.com\/Ra-kumar4216$/m);
+  assert.doesNotMatch(out, /Page\s+2\s+of\s+3/);
+  assert.ok(!out.split('\n').includes('1'));
+});
+
+test('linkedin pdf: Contact lines join the header and Top Skills is a skills section', () => {
+  const text = 'Ratan Kumar\nChennai, India\nSummary\nBuilds apps.\nExperience\nAmdox Technologies\nContact\n9507317244 (Mobile)\nratan@example.com\nTop Skills\nAI Literacy\nGenerative AI\nCertifications\nJava Assessment';
+  const sections = ATS.parseSections(text);
+  const header = sections.find(sec => sec.key === 'header').lines.join('\n');
+  assert.match(header, /Ratan Kumar/);
+  assert.match(header, /9507317244\n/);
+  assert.doesNotMatch(header, /\(Mobile\)/);
+  assert.match(header, /ratan@example\.com/);
+  assert.deepEqual(sections.filter(sec => sec.key !== 'header').map(sec => sec.key), ['summary', 'experience', 'skills', 'certifications']);
+});
+
+test('pdf columns: sidebar, 3 columns, header above columns; date column and single column are not split', () => {
+  const item = (str, x, y, w) => ({ str, transform: [1, 0, 0, 1, x, y], width: w, height: 10 });
+  const col = (prefix, x, w, n, y0 = 700) => Array.from({ length: n }, (_, i) => item(`${prefix} line ${i}`, x, y0 - i * 14, w));
+
+  // sidebar + main (LinkedIn style)
+  const mainCol = col('main column text', 224, 300, 30);
+  mainCol[0].height = 22; // the name is the biggest text on the page
+  const two = ATS.pageText([...col('side', 22, 80, 12), ...mainCol]);
+  assert.match(two.main, /^main column text line 0\nmain column text line 1/);
+  assert.match(two.side, /^side line 0\nside line 1/);
+  assert.doesNotMatch(two.main, /side line/);
+
+  // full-width name + contact row above two columns
+  const withHeader = ATS.pageText([item('RATAN KUMAR', 40, 800, 500), item('city | phone | mail', 40, 786, 500), ...col('left', 40, 150, 14), ...col('right', 260, 280, 24)]);
+  const all = `${withHeader.main}\n${withHeader.side}`;
+  assert.match(withHeader.main, /^RATAN KUMAR\ncity \| phone \| mail\n/);
+  ['left line 0', 'left line 13', 'right line 0', 'right line 23'].forEach(s => assert.ok(all.includes(s), s));
+  assert.ok(all.indexOf('left line 3') < all.indexOf('left line 4'), 'order inside a column is kept');
+  assert.ok(!/left line 5\nright line/.test(all), 'columns are not interleaved');
+
+  // three columns
+  const three = ATS.pageText([...col('A', 30, 120, 12), ...col('B', 220, 120, 12), ...col('C', 410, 120, 12)]);
+  const t3 = `${three.main}\n${three.side}`;
+  ['A', 'B', 'C'].forEach(c => {
+    const idx = [...Array(12).keys()].map(i => t3.indexOf(`${c} line ${i}`));
+    assert.ok(idx.every(i => i >= 0) && idx.every((v, i) => i === 0 || v > idx[i - 1]), `column ${c} stays in one piece, in order`);
+  });
+
+  // single column + a right-aligned dates column must stay one column
+  const single = [...Array.from({ length: 20 }, (_, i) => item(`Developer intern at company number ${i} doing things`, 40, 700 - i * 14, 300))];
+  for (let i = 0; i < 4; i += 1) {
+    single.push(item('Mar 2026 – Present', 500, 700 - i * 56, 70));
+  }
+  const one = ATS.pageText(single);
+  assert.equal(one.side, '');
+  assert.match(one.main, /Mar 2026 – Present/);
+});
+
+test('cover letter: skills have no labels, role/company/education read naturally, no icon glyphs', () => {
+  const resume = `Aayush Raj
+singhaayush7766@gmail.com | +91-8340794311
+Technical Skills
+Programming: Java
+Backend: Spring Boot, REST APIs
+Frontend: HTML, CSS
+Experience
+Amdox Technologies   March 2026 – Present
+Java Full Stack Developer Intern   Chennai, India
+Project
+Online Job Portal System   §
+Education
+B.Tech in Computer Science Engineering   2023 – 2027
+LNCT University, Bhopal`;
+  const letter = ATS.generateCoverLetter(resume, '');
+  assert.match(letter, /My background includes Java, Spring Boot, REST APIs, HTML and CSS,/);
+  assert.doesNotMatch(letter, /Programming:|Backend:|Frontend:|§|2023/);
+  assert.match(letter, /including Online Job Portal System,/);
+  assert.match(letter, /I am currently working as a Java Full Stack Developer Intern at Amdox Technologies\./);
+  assert.match(letter, /Alongside this, I am pursuing B\.Tech in Computer Science Engineering at LNCT University\./);
+  const upper = ATS.generateCoverLetter('RATAN KUMAR\nratan@example.com\nSkills\nJava', '');
+  assert.match(upper, /^Ratan Kumar\n/);
+  assert.match(upper, /\nRatan Kumar$/);
+});
+
+test('resume header: short contact items never wrap in the middle', () => {
+  const t = ATS.tailor('Aayush Raj\nBhopal\nsinghaayush7766@gmail.com | +91-8340794311\ngithub.com/Aayush-code11 | linkedin.com/in/aayush-raj-069139361\nSkills\nJava', '');
+  const html = ATS.renderHTML(t.sections, t.keywords);
+  assert.match(html, /<span class="cv-nw">linkedin\.com\/in\/aayush-raj-069139361<\/span>/);
+});
+
+test('blocks: LinkedIn company / role / date / location lines become one header, bullets never swallow the next job', () => {
+  const lines = [
+    'Amdox Technologies', 'java full stack developer', 'March 2026 - Present   (3 months)',
+    '• Develop and maintain apps', '• Debug and resolve production issues through root-cause analysis',
+    'Codec Technologies India', '3 months', 'Data Analystics', 'April 2026 - May 2026   (2 months)',
+    'Full Stck Developer', 'March 2026 - April 2026   (2 months)', '• Designed pages', '• Worked in an Agile team',
+    'HexSoftwares', 'Web Development Intern', 'March 2026 - April 2026   (2 months)', 'India', '• Built a gym site',
+  ];
+  const first = ATS.splitBlocks(lines);
+  assert.deepEqual(first.map(b => b.header[0].split(/\s{3,}/)[0]), [
+    'Amdox Technologies', 'Codec Technologies India', 'Codec Technologies India – Full Stck Developer', 'HexSoftwares',
+  ]);
+  assert.deepEqual(first[3].header.slice(1), ['Web Development Intern', 'India']);
+  assert.ok(first.every(b => b.bullets.every(x => x.startsWith('•'))), 'plain lines must not become bullets');
+  assert.ok(!first[0].bullets.join(' ').includes('Codec'));
+  // tailor() serialises blocks and render parses them again: the result must be stable
+  const again = ATS.splitBlocks(first.flatMap(b => [...b.header, ...b.bullets]));
+  assert.deepEqual(again.map(b => b.header), first.map(b => b.header));
+});
+
+test('blocks: education year ranges are headers, grades are details', () => {
+  const blocks = ATS.splitBlocks([
+    'B.Tech in Computer Science Engineering   2023 – 2027', 'LNCT University, Bhopal', 'Current SGPA: 8.38',
+    'Class XII (CBSE)   2022', 'Sardana Public School — 79.6%',
+  ]);
+  assert.equal(blocks.length, 2);
+  assert.deepEqual(blocks[0].header, ['B.Tech in Computer Science Engineering   2023 – 2027', 'LNCT University, Bhopal']);
+  assert.deepEqual(blocks[1].header, ['Class XII (CBSE)   2022', 'Sardana Public School — 79.6%']);
+});
+
+test('pdf text: LinkedIn bullets, wrapped date brackets and pipe headline are normalised', () => {
+  const out = ATS.cleanExtractedText('•Develop apps\nFinal year l Software Developer l Java | Spring Boot\nBachalore of computer application , Computer application   · (June 2024 - July\n2027)');
+  assert.match(out, /^• Develop apps$/m);
+  assert.match(out, /^Final year \| Software Developer \| Java \| Spring Boot$/m);
+  assert.match(out, /^Bachalore of computer application, Computer application {3}June 2024 - July 2027$/m);
+});
+
+test('render: when no section heading is found the text is shown line by line, not glued with middots', () => {
+  const lines = ['Jane Doe', 'Chennai | jane@x.com'].concat(Array.from({ length: 12 }, (_, i) => `Plain sentence number ${i} about work.`));
+  const t = ATS.tailor(lines.join('\n'), '');
+  const html = ATS.renderHTML(t.sections, t.keywords, { highlight: false });
+  assert.ok((html.match(/<p class="cv-line">/g) || []).length >= 10);
+  assert.doesNotMatch(html, /Plain sentence number 1 about work\. · /);
+});
+
+test('render: role and location lines are quiet sub-lines, other sections keep their own heading', () => {
+  const t = ATS.tailor('Jane Doe\nExperience\nAcme Corp   2024 - 2025\nBackend Intern   Chennai, India\n• Built APIs\nAchievements\n• Won a hackathon', '');
+  const html = ATS.renderHTML(t.sections, t.keywords, { highlight: false });
+  assert.match(html, /cv-block-sub-title">Backend Intern<\/span><span class="cv-block-date">Chennai, India/);
+  assert.match(html, /cv-section-title">Achievements</);
+  assert.doesNotMatch(html, /<li>Backend Intern/);
+});
+
+test('fail-safe: when no headings are found the resume is never glued into one paragraph', () => {
+  const lines = ['RATAN KUMAR', 'Chennai | 9507317244 | ratan@example.com'];
+  for (let i = 0; i < 30; i += 1) {
+    lines.push(i % 3 === 0 ? `• Built feature number ${i} with Java` : `Plain line number ${i} about work`);
+  }
+  const t = ATS.tailor(lines.join('\n'), '');
+  const html = ATS.renderHTML(t.sections, t.keywords);
+  assert.ok(!/cv-contact">[^<]{600,}/.test(html), 'contact line must stay short');
+  assert.ok((html.match(/<p class="cv-line">/g) || []).length >= 15);
+  const tips = ATS.analyze(lines.join('\n'), '').missing.join(' ');
+  assert.match(tips, /No section headings were detected/);
+});
+
+test('headings: common variants and letter-spaced headings are recognised', () => {
+  const text = [
+    'Name Here',
+    'P R O F I L E  S U M M A R Y',
+    'Text one.',
+    'IT Skills',
+    'Java',
+    'Extra-Curricular Activities',
+    'Chess',
+    'Awards & Honors',
+    'Prize',
+    'Soft Skills',
+    'Teamwork',
+    'Declaration',
+    'True.',
+  ].join('\n');
+  const keys = ATS.parseSections(text).map(sec => sec.key);
+  assert.deepEqual(keys, ['header', 'summary', 'skills', 'other', 'other', 'other', 'other']);
+});
+
+test('analyze: raw PDF text (footers, icon glyphs) scores the same as clean text', () => {
+  const clean = 'Aayush Raj\na@b.com | +91-8340794311\nSkills\nJava, Spring Boot\nExperience\nIntern\n• Built APIs for 500+ users\nEducation\nBTech 2023 – 2027';
+  const dirty = clean.replace('Aayush Raj', 'Aayush Raj\n§').replace('Education', 'Page 1 of 2\nEducation') + '\n1';
+  assert.equal(ATS.analyze(dirty, '').score, ATS.analyze(clean, '').score);
+});
+
+test('css: every class used in index.html has a style rule (no unstyled elements)', () => {
+  const root = path.join(__dirname, '../Ats resume checker');
+  const inline = (indexHtml.match(/<style[\s\S]*?<\/style>/g) || []).join('\n');
+  const css = [fs.readFileSync(path.join(root, 'tailwind.generated.css'), 'utf8'), fs.readFileSync(path.join(root, 'styles.css'), 'utf8'), inline].join('\n');
+  const markers = new Set(['group', 'peer', 'hidden', 'is-active', 'is-done', 'is-locked', 'kw-hit', 'sr-only']);
+  const escape = c => c.replace(/([^a-zA-Z0-9_-])/g, (ch, _x, offset) => (ch === ',' ? '\\2c ' : `\\${ch}`));
+  const used = new Set();
+  [...indexHtml.matchAll(/\sclass="([^"]+)"/g)].forEach(m => m[1].split(/\s+/).filter(Boolean).forEach(c => used.add(c)));
+  const missing = [...used].filter(c => !markers.has(c) && !css.includes(`.${escape(c)}`) && !css.includes(`.${c}`));
+  assert.deepEqual(missing, [], `classes without CSS: ${missing.join(', ')}`);
+});
+
+test('blocks: an institution line after a coursework bullet is a new education entry', () => {
+  const blocks = ATS.splitBlocks([
+    'Sengunthar Arts & Science College   June 2024 – July 2027',
+    'Bachelor of Computer Applications (BCA)   Tamil Nadu, India',
+    '• Relevant Coursework: Data Structures & Algorithms, Database Management',
+    'Systems, Computer Networks, Software Engineering',
+    'Sanskar International School',
+    'High School Diploma',
+  ]);
+  assert.equal(blocks.length, 2);
+  assert.equal(blocks[0].bullets.length, 1);
+  assert.match(blocks[0].bullets[0], /Database Management Systems, Computer Networks, Software Engineering$/);
+  assert.deepEqual(blocks[1].header, ['Sanskar International School', 'High School Diploma']);
+});
+
+test('headings: wrapped list fragments and "label: value" lines are never section headings', () => {
+  const text = 'Name\nSkills\nProgramming: Java\nTools & Platforms: Git, GitHub, Firebase,\nYouTube Data API, REST APIs\nTechnologies, Software Engineering\nProjects & Open Source\nApp';
+  const keys = ATS.parseSections(text).map(sec => sec.key);
+  assert.deepEqual(keys, ['header', 'skills', 'projects']);
+});
+
+// ---------------------------------------------------------------------------
+// Any resume -> the template the user picked (HTML / PDF print and Word)
+// ---------------------------------------------------------------------------
+const Templates = require('../Ats resume checker/resume-templates/selector.js');
+const tplDir = path.join(__dirname, '../Ats resume checker/resume-templates/templates');
+const allTemplates = fs.readdirSync(tplDir).filter(f => f.endsWith('.json')).map(f => Templates.normalize(JSON.parse(fs.readFileSync(path.join(tplDir, f), 'utf8'))));
+
+const sampleResume = `ASHA VERMA
+Pune, India | +91 98765 43210 | asha@example.com
+linkedin.com/in/asha-verma | github.com/asha-verma
+Summary
+Backend developer who builds reliable APIs with Java and Spring Boot.
+Skills
+Languages: Java, Python, SQL
+Tools: Git, Docker, Maven
+Experience
+Acme Software   Jan 2025 – Present
+Java Developer Intern   Pune, India
+• Built REST APIs with Spring Boot used by 500+ users
+• Reduced query time by 30% using indexes
+Projects
+Job Portal | 2024
+• Developed a job portal with Spring Boot and MySQL
+Education
+B.Tech in Computer Science   2023 – 2027
+LNCT University, Bhopal
+Certifications
+• Java Programming – Infosys`;
+
+const wordsOf = text => text.toLowerCase().replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/[^a-z0-9+#@./-]+/g, ' ').split(/\s+/).filter(w => w.length > 2);
+
+test('templates: every template keeps every word of the resume (nothing lost, nothing invented)', () => {
+  const original = new Set(wordsOf(sampleResume));
+  assert.ok(allTemplates.length >= 8, 'all template files are loaded');
+  allTemplates.forEach(tpl => {
+    const t = ATS.tailor(sampleResume, '');
+    const html = ATS.renderHTML(Templates.orderSections(t.sections, tpl), t.keywords, { highlight: false, ...Templates.renderOptions(tpl) });
+    const got = new Set(wordsOf(html));
+    const lost = [...original].filter(w => !got.has(w));
+    const invented = [...got].filter(w => !original.has(w));
+    assert.deepEqual(lost, [], `${tpl.id} lost: ${lost}`);
+    assert.deepEqual(invented, [], `${tpl.id} invented: ${invented}`);
+  });
+});
+
+test('templates: layout, sidebar sections, section order and icons follow the selected template', () => {
+  allTemplates.forEach(tpl => {
+    const t = ATS.tailor(sampleResume, '');
+    const ordered = Templates.orderSections(t.sections, tpl);
+    const html = ATS.renderHTML(ordered, t.keywords, { highlight: false, ...Templates.renderOptions(tpl) });
+    const icons = (html.match(/<svg/g) || []).length;
+    if (tpl.icons) {
+      assert.ok(icons >= 4, `${tpl.id}: contact icons are drawn (${icons})`);
+    } else {
+      assert.equal(icons, 0, `${tpl.id}: no icons when the template has none`);
+    }
+    if (tpl.layout === 'single') {
+      assert.ok(!html.includes('cv-cols'), `${tpl.id}: single column`);
+    } else {
+      assert.ok(html.includes(tpl.layout === 'sidebar-left' ? 'cv-side-left' : 'cv-side-right'), `${tpl.id}: sidebar side`);
+      const side = html.split('<div class="cv-side">')[1] || '';
+      const sideTitles = [...side.matchAll(/cv-section-title">([^<]+)/g)].map(m => m[1].toLowerCase());
+      assert.ok(sideTitles.some(s => /skills/.test(s)) && sideTitles.some(s => /education/.test(s)), `${tpl.id}: skills + education live in the sidebar`);
+      const main = html.split('<div class="cv-main">')[1].split('<div class="cv-side">')[0];
+      assert.ok(/Experience/i.test(main) && !/Education/i.test(main), `${tpl.id}: experience stays in the main column`);
+    }
+    const keys = ordered.filter(s => s.key !== 'header').map(s => s.key);
+    const ranks = keys.map(k => (tpl.sectionOrder.includes(k) ? tpl.sectionOrder.indexOf(k) : 99));
+    assert.deepEqual(ranks, [...ranks].sort((a, b) => a - b), `${tpl.id}: sections follow sectionOrder`);
+  });
+});
+
+test('word export: every template builds a valid .docx with icons / two-column table as selected', async () => {
+  const docx = require('docx');
+  const JSZip = require('jszip');
+  const icons = require('../Ats resume checker/resume-icons.js');
+  const src = fs.readFileSync(path.join(__dirname, '../Ats resume checker/app.js'), 'utf8');
+  const body = src.slice(src.indexOf('function buildDocxDocument('), src.indexOf('async function exportDocx'));
+  const build = new Function('docx', 'ATS', 'window', 'ResumeIcons', `${body}\nreturn buildDocxDocument;`)(docx, ATS, { ResumeIcons: icons }, icons);
+  for (const tpl of allTemplates) {
+    const t = ATS.tailor(sampleResume, '');
+    const buf = await docx.Packer.toBuffer(build(Templates.orderSections(t.sections, tpl), tpl));
+    const zip = await JSZip.loadAsync(buf);
+    const xml = await zip.file('word/document.xml').async('string');
+    const media = Object.keys(zip.files).filter(f => f.startsWith('word/media/')).length;
+    assert.match(xml, /ASHA VERMA/, `${tpl.id}: name`);
+    assert.match(xml, /Spring Boot used by 500\+ users/, `${tpl.id}: bullets`);
+    assert.equal(media >= 4, tpl.icons, `${tpl.id}: icons in Word only when the template has icons (${media})`);
+    assert.equal(xml.includes('<w:tbl>'), tpl.layout !== 'single', `${tpl.id}: two-column table`);
+    if (tpl.layout !== 'single') {
+      assert.match(xml, /<w:keepNext w:val="false"\/>/, `${tpl.id}: headings in table cells must not keep-with-next`);
+    }
+  }
 });
