@@ -1,0 +1,32 @@
+{
+  "id": "sidebar-left",
+  "name": "Two-Column Sidebar",
+  "description": "Name and contact icons on top; skills, education and certifications in a shaded left column.",
+  "bestFor": "Design-aware roles (some strict ATS misread columns)",
+  "style": {
+    "font": "Calibri, Arial, sans-serif",
+    "accent": "#1d4ed8",
+    "basePx": 11,
+    "lineHeight": 1.4,
+    "headingTransform": "uppercase",
+    "headingRule": "1.5px solid #1d4ed8",
+    "nameAlign": "left",
+    "bullet": "disc"
+  },
+  "layout": "sidebar-left",
+  "sidebar": [
+    "skills",
+    "education",
+    "certifications"
+  ],
+  "icons": true,
+  "iconColor": "#1d4ed8",
+  "sectionOrder": [
+    "summary",
+    "experience",
+    "projects",
+    "education",
+    "skills",
+    "certifications"
+  ]
+}
