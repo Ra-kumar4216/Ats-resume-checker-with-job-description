@@ -225,58 +225,6 @@
     showError(msg);
   }
 
-  function pageText(items) {
-    const values = items
-      .map(it => ({ text: String(it.str || ''), x: it.transform[4], y: it.transform[5] }))
-      .filter(it => it.text);
-    if (!values.length) {
-      return '';
-    }
-    const xs = [...new Set(values.map(it => Math.round(it.x)))].sort((x, y) => x - y);
-    let split = -1,
-      gap = 0;
-    for (let i = 1; i < xs.length; i++) {
-      if (xs[i] - xs[i - 1] > gap) {
-        gap = xs[i] - xs[i - 1];
-        split = i;
-      }
-    }
-    const isRealColumn = group => {
-      const byLine = new Map();
-      group.forEach(it => {
-        const key = Math.round(it.y / 3);
-        const line = byLine.get(key) || { x: Infinity, len: 0 };
-        line.x = Math.min(line.x, it.x);
-        line.len += it.text.trim().length;
-        byLine.set(key, line);
-      });
-      const lines = [...byLine.values()];
-      if (lines.length < 8) {
-        return false;
-      }
-      const common = Math.max(...lines.map(a => lines.filter(b => Math.abs(b.x - a.x) <= 1).length));
-      const avgLen = lines.reduce((n, l) => n + l.len, 0) / lines.length;
-      return common / lines.length >= 0.6 && avgLen >= 35;
-    };
-    const left = gap > 120 ? values.filter(it => it.x < xs[split]) : [],
-      right = gap > 120 ? values.filter(it => it.x >= xs[split]) : [];
-    const columns = gap > 120 && isRealColumn(right) ? [left, right] : [values];
-    return columns
-      .map(column => {
-        column.sort((a, b) => b.y - a.y || a.x - b.x);
-        let out = '',
-          lastY = null;
-        column.forEach(it => {
-          if (lastY !== null) {
-            out += Math.abs(it.y - lastY) > 2 ? '\n' : ' ';
-          }
-          out += it.text;
-          lastY = it.y;
-        });
-        return out;
-      })
-      .join('\n');
-  }
   async function readPdf(buf) {
     // Vendored pdf.js (classic script, sets window.pdfjsLib) - no CDN, works with the strict CSP.
     const pdfjsLib = await loadScript('assets/vendor/pdf.min.js', 'pdfjsLib');
@@ -286,20 +234,26 @@
       pdf.destroy();
       throw new Error('Too many PDF pages');
     }
+    // Two-column PDFs (LinkedIn): read every page's main column first, then the sidebars,
+    // so a section that continues on page 2 is not cut in half by the sidebar.
     let text = '';
+    let sidebars = '';
     for (let i = 1; i <= pdf.numPages; i++) {
       const content = await (await pdf.getPage(i)).getTextContent();
-      text += pageText(content.items) + '\n';
-      if (text.length > MAX_EXTRACTED_CHARS) {
+      const page = ATS.pageText(content.items);
+      text += page.main + '\n';
+      sidebars += page.side ? page.side + '\n' : '';
+      if (text.length + sidebars.length > MAX_EXTRACTED_CHARS) {
         pdf.destroy();
         throw new Error('Extracted text is too large');
       }
     }
     pdf.destroy();
+    text += sidebars;
     if (!text.trim()) {
       throw new Error('No extractable text');
     }
-    return text;
+    return ATS.cleanExtractedText(text);
   }
   async function readDocx(buf) {
     const mammoth = await loadScript('assets/vendor/mammoth.browser.min.js', 'mammoth');
@@ -451,7 +405,8 @@
     if (!tailored) {
       return;
     }
-    $('resume-page').innerHTML = ATS.renderHTML(tailored.sections, tailored.keywords, opts());
+    const format = window.ResumeTemplates ? ResumeTemplates.renderOptions(template) : {};
+    $('resume-page').innerHTML = ATS.renderHTML(tailored.sections, tailored.keywords, { ...opts(), ...format });
     $('tailored-output').value = ATS.renderText(tailored.sections, tailored.keywords, opts());
     fitResumeToScreen();
   }
@@ -605,64 +560,134 @@
     return loadScript('assets/vendor/docx.umd.js', 'docx');
   }
   function buildDocxDocument(sections, template) {
-    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, TabStopType, TabStopPosition } = docx;
+    const {
+      Document, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType,
+      HeadingLevel, AlignmentType, VerticalAlign, TabStopType,
+    } = docx;
     const style = template?.style || {};
     const font = String(style.font || 'Calibri').split(',')[0].replace(/['"]/g, '').trim() || 'Calibri';
     const accent = style.accent || '#111111';
     const basePx = style.basePx || 11.5;
     const lineHeight = style.lineHeight || 1.45;
     const headingTransform = style.headingTransform || 'uppercase';
-    const headingRule = style.headingRule || '1.5px solid #1a1a1a';
     const nameAlign = style.nameAlign || 'left';
+    const layout = template?.layout || 'single';
+    const wantIcons = template?.icons === true;
+    const sidebarKeys = template?.sidebar?.length ? template.sidebar : ATS.SIDEBAR_KEYS;
+    const body = sections.filter(sec => sec.key !== 'header');
+    const twoCols =
+      layout.startsWith('sidebar') &&
+      body.some(sec => sidebarKeys.includes(sec.key)) &&
+      body.some(sec => !sidebarKeys.includes(sec.key));
 
-    const children = [];
+    const head = [];
+    const mainList = [];
+    const sideList = [];
+    let target = head;
+    const sidebarCell = () => twoCols && target === sideList;
     const addHeading = (text, level = HeadingLevel.HEADING_2) => {
-      children.push(new Paragraph({
-        text: headingTransform === 'uppercase' ? text.toUpperCase() : headingTransform === 'capitalize' ? text : text,
+      target.push(new Paragraph({
+        children: [new TextRun({
+          text: headingTransform === 'uppercase' ? text.toUpperCase() : text,
+          font,
+          bold: true,
+          size: Math.round(basePx * 2 * 1.08),
+          color: headingTransform === 'uppercase' && accent.toLowerCase() === '#111111' ? '111111' : accent.replace('#', ''),
+        })],
         heading: level,
+        // inside a table cell, "keep with next" makes Word / LibreOffice push the whole row to the next page
+        ...(twoCols ? { keepNext: false, keepLines: false } : {}),
         alignment: AlignmentType.LEFT,
         spacing: { before: 200, after: 100 },
         border: { bottom: { color: accent.replace('#', ''), style: BorderStyle.SINGLE, size: 6 } },
       }));
     };
+    const accentHex = accent.replace('#', '');
     const addParagraph = (text, options = {}) => {
-      children.push(new Paragraph({
-        children: [new TextRun({ text, font, size: Math.round(basePx * 2), color: '000000' })],
+      const sizeScale = options.sizeScale || 1;
+      const runs = options.runs || [new TextRun({
+        text,
+        font,
+        bold: options.bold,
+        italics: options.italics,
+        size: Math.round(basePx * 2 * (sidebarCell() ? 0.94 : 1) * sizeScale),
+        color: options.color || '000000',
+      })];
+      target.push(new Paragraph({
+        children: runs,
         spacing: { line: Math.round(lineHeight * 240), before: 40, after: 40, ...options.spacing },
         alignment: options.alignment,
         indent: options.indent,
         bullet: options.bullet,
+        tabStops: options.tabStops,
+        keepNext: options.keepNext,
       }));
     };
+    // right edge of the text area, used for right-aligned dates (single column only)
+    const rightTab = [{ type: TabStopType.RIGHT, position: 11906 - 2 * 1440 }];
+    const iconRun = kind => {
+      const bytes = window.ResumeIcons ? ResumeIcons.png(kind, template?.iconColor || accent) : null;
+      return bytes ? [new ImageRun({ data: bytes, transformation: { width: 13, height: 13 } }), new TextRun({ text: '  ', font })] : [];
+    };
+    const align = nameAlign === 'center' ? AlignmentType.CENTER : AlignmentType.LEFT;
 
     sections.forEach(section => {
       if (section.key === 'header') {
+        target = head;
         const lines = section.lines.map(l => l.trim()).filter(Boolean);
         if (!lines.length) {return;}
         const [name, ...rest] = lines;
-        addParagraph(name, { alignment: nameAlign === 'center' ? AlignmentType.CENTER : AlignmentType.LEFT, spacing: { before: 0, after: 60, line: 280 } });
-        if (rest.length) {
-          addParagraph(rest.join(' · '), { alignment: nameAlign === 'center' ? AlignmentType.CENTER : AlignmentType.LEFT, spacing: { before: 0, after: 200, line: 240 } });
+        addParagraph(name, { alignment: align, bold: true, color: accentHex, sizeScale: 2.0, spacing: { before: 0, after: 60, line: 340 } });
+        if (wantIcons && rest.length) {
+          const items = ATS.contactItems(rest);
+          const tagline = items.filter(i => !i.kind).map(i => i.text).join(' · ');
+          if (tagline) {addParagraph(tagline, { alignment: align, spacing: { before: 0, after: 60 } });}
+          const runs = [];
+          items.filter(i => i.kind).forEach((item, i) => {
+            if (i) {runs.push(new TextRun({ text: '      ', font }));}
+            runs.push(...iconRun(item.kind), new TextRun({ text: item.text, font, size: Math.round(basePx * 2 * 0.92), color: '444444' }));
+          });
+          head.push(new Paragraph({ children: runs, alignment: align, spacing: { before: 0, after: 200 } }));
+        } else if (rest.length) {
+          addParagraph(rest.join(' · '), { alignment: align, spacing: { before: 0, after: 200, line: 240 } });
         }
         return;
       }
-      const title = ATS.TITLES[section.key] || (section.title || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+      target = twoCols && sidebarKeys.includes(section.key) ? sideList : mainList;
+      const pretty = (section.title || '').replace(/[:\s]+$/, '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+      const title = (section.key === 'other' && pretty) || ATS.TITLES[section.key] || pretty;
       addHeading(title);
       const lines = section.lines.map(l => l.trim()).filter(Boolean);
       if (section.key === 'skills') {
-        lines.forEach(line => addParagraph(section.key === 'skills' ? line : ATS.stripBullets(line)));
+        lines.forEach(line => addParagraph(line));
       } else if (section.key === 'summary') {
         addParagraph(lines.join(' '));
       } else {
         const blocks = ATS.splitBlocks(section.lines);
         blocks.forEach(block => {
-          block.header.map(h => h.trim()).filter(Boolean).forEach(header => {
+          block.header.map(h => h.trim()).filter(Boolean).forEach((header, headerIndex) => {
             const { title: blockTitle, date } = ATS.splitHeader(header);
+            const sub = headerIndex > 0 && blockTitle && !/\b(?:19|20)\d{2}\b/.test(date);
             if (!blockTitle && date) {
-              addParagraph(date, { alignment: AlignmentType.RIGHT, spacing: { before: 60, after: 40 } });
+              addParagraph(date, { italics: true, color: '555555', sizeScale: 0.95, alignment: sidebarCell() ? AlignmentType.LEFT : AlignmentType.LEFT, spacing: { before: 20, after: 40 } });
+            } else if (sub) {
+              addParagraph(date ? `${blockTitle}   ${date}` : blockTitle, { italics: true, color: '333333', sizeScale: 0.95, spacing: { before: 0, after: 40 } });
+            } else if (date && !twoCols) {
+              // title on the left, date flush right (one line, like the on-screen resume)
+              addParagraph('', {
+                runs: [
+                  new TextRun({ text: blockTitle, font, bold: true, size: Math.round(basePx * 2 * 1.05), color: '000000' }),
+                  new TextRun({ text: `\t${date}`, font, italics: true, size: Math.round(basePx * 2 * 0.95), color: '555555' }),
+                ],
+                tabStops: rightTab,
+                keepNext: true,
+                spacing: { before: 120, after: 20 },
+              });
             } else {
-              const datePart = date ? ` \u2014 ${date}` : '';
-              addParagraph(blockTitle + datePart, { spacing: { before: 100, after: 40 } });
+              addParagraph(blockTitle, { bold: true, sizeScale: 1.05, keepNext: !twoCols, spacing: { before: 120, after: 20 } });
+              if (date) {
+                addParagraph(date, { italics: true, color: '555555', sizeScale: 0.95, spacing: { before: 0, after: 40 } });
+              }
             }
           });
           block.bullets.map(ATS.stripBullets).filter(Boolean).forEach(bullet => {
@@ -672,7 +697,40 @@
       }
     });
 
-    return new Document({ sections: [{ properties: {}, children }] });
+    if (!twoCols) {
+      return new Document({ sections: [{ properties: {}, children: [...head, ...mainList] }] });
+    }
+
+    // two-column templates: a borderless 2-cell table under the header, shaded sidebar cell
+    const margin = 900;
+    const total = 11906 - margin * 2;
+    const sideW = Math.round(total * 0.31);
+    const mainW = total - sideW;
+    const none = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+    const borders = { top: none, bottom: none, left: none, right: none };
+    const cell = (children, width, fill) => new TableCell({
+      children: children.length ? children : [new Paragraph('')],
+      width: { size: width, type: WidthType.DXA },
+      borders,
+      verticalAlign: VerticalAlign.TOP,
+      margins: { top: 80, bottom: 120, left: 160, right: 160 },
+      shading: fill ? { type: ShadingType.CLEAR, fill, color: 'auto' } : undefined,
+    });
+    const sideCell = cell(sideList, sideW, 'F1F5F9');
+    const mainCell = cell(mainList, mainW);
+    const left = layout === 'sidebar-right';
+    const table = new Table({
+      width: { size: total, type: WidthType.DXA },
+      columnWidths: left ? [mainW, sideW] : [sideW, mainW],
+      borders: { ...borders, insideHorizontal: none, insideVertical: none },
+      rows: [new TableRow({ children: left ? [mainCell, sideCell] : [sideCell, mainCell] })],
+    });
+    return new Document({
+      sections: [{
+        properties: { page: { margin: { top: margin, bottom: margin, left: margin, right: margin } } },
+        children: [...head, table],
+      }],
+    });
   }
   async function exportDocx() {
     if (!confirmLossyExport()) {return;}
