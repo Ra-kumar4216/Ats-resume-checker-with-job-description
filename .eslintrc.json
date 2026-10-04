@@ -8,7 +8,8 @@
     "ATS": "readonly",
     "ResumeTemplates": "readonly",
     "ATS_SKILLS": "readonly",
-    "ATSApp": "writable"
+    "ATSApp": "writable",
+    "ResumeIcons": "readonly"
   },
   "extends": [
     "eslint:recommended"
