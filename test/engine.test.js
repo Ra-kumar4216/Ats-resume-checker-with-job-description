@@ -697,3 +697,118 @@ test('word export: every template builds a valid .docx with icons / two-column t
     }
   }
 });
+
+// ---------------------------------------------------------------------------
+// Print page fit: 1 page when it can look good, otherwise well-filled pages
+// ---------------------------------------------------------------------------
+test('page breaks: an entry that would be cut by the page edge moves whole to the next page', () => {
+  const H = 1000;
+  // a 200px entry starting at 900 would cross the edge: pushed to 1000, everything below moves 100px
+  assert.equal(ATS.simulatePageBreaks([{ bottom: 1500, ranges: [{ top: 900, bottom: 1100 }] }], H), 1.6);
+  // fits: unchanged
+  assert.equal(ATS.simulatePageBreaks([{ bottom: 1500, ranges: [{ top: 100, bottom: 400 }, { top: 1200, bottom: 1300 }] }], H), 1.5);
+  // nested piece (a heading inside an entry that was already placed) is not counted twice
+  assert.equal(ATS.simulatePageBreaks([{ bottom: 1500, ranges: [{ top: 900, bottom: 1100 }, { top: 950, bottom: 1000 }] }], H), 1.6);
+  // taller than a page: the browser must split it, nothing moves
+  assert.equal(ATS.simulatePageBreaks([{ bottom: 2500, ranges: [{ top: 500, bottom: 1700 }] }], H), 2.5);
+  // two columns: the taller one decides
+  assert.equal(ATS.simulatePageBreaks([{ bottom: 900, ranges: [] }, { bottom: 1500, ranges: [{ top: 950, bottom: 1050 }] }], H), 1.55);
+  // second push depends on the first
+  assert.equal(ATS.simulatePageBreaks([{ bottom: 2000, ranges: [{ top: 900, bottom: 1100 }, { top: 1850, bottom: 2050 }] }], H), 2.15);
+});
+
+test('page fit: 1 page whenever possible, a 2nd page only when it ends up at least half full', () => {
+  // content height in pages for L (at zoom 1, normal spacing); text height ~ zoom^2, tight spacing saves ~10%
+  const model = L => (zoom, gap) => L * zoom * zoom * (gap < 1 ? 0.9 : 1);
+  for (let L = 0.2; L <= 3.2; L += 0.01) {
+    const measure = model(L);
+    const fit = ATS.choosePageFit(measure);
+    const where = `L=${L.toFixed(2)} -> ${JSON.stringify(fit)}`;
+    assert.ok(fit.zoom >= 0.9 && fit.zoom <= 1.12, `zoom range: ${where}`);
+    assert.ok(measure(fit.zoom, fit.gap) <= fit.pages * 0.9751 + 1e-9, `never overflows its pages: ${where}`);
+    const lastFill = measure(fit.zoom, fit.gap) - (fit.pages - 1);
+    if (fit.pages > 1 && L < 3) {
+      assert.ok(lastFill >= 0.5, `last page at least half full: ${where}`);
+      assert.ok(measure(0.9, 0.7) > (fit.pages - 1) * 0.975, `a smaller page count was not possible: ${where}`);
+    }
+    if (L <= 1.0) {
+      assert.equal(fit.pages, 1, where);
+    }
+    if (L >= 1.0 && L <= 1.25) {
+      assert.equal(fit.pages, 1, `slightly too long: shrink to 1 page: ${where}`);
+    }
+  }
+  assert.deepEqual(ATS.choosePageFit(() => 0), { zoom: 1, gap: 1, pages: 1, fill: 0, unmeasured: true });
+});
+
+test('page fit: the real-world case - a resume 2% over one page is shrunk to one page, not left with 10 lines on page 2', () => {
+  const fit = ATS.choosePageFit((zoom, gap) => 1.02 * zoom * zoom * (gap < 1 ? 0.92 : 1));
+  assert.equal(fit.pages, 1);
+  assert.ok(fit.zoom >= 0.95 && fit.zoom <= 1);
+});
+
+test('page fit: the DOM measurement collects the same unbreakable pieces as the print stylesheet', () => {
+  // tiny fake DOM (no jsdom dependency): enough of Element for breakColumns()
+  const node = (tag, cls, top, bottom, children = []) => {
+    const el = {
+      tag,
+      cls: cls.split(' ').filter(Boolean),
+      children,
+      parent: null,
+      classList: { contains: c => el.cls.includes(c) },
+      getBoundingClientRect: () => ({ top, bottom }),
+      get firstElementChild() {
+        return el.children[0] || null;
+      },
+      get lastElementChild() {
+        return el.children[el.children.length - 1] || null;
+      },
+      get nextElementSibling() {
+        return el.parent ? el.parent.children[el.parent.children.indexOf(el) + 1] || null : null;
+      },
+    };
+    children.forEach(c => {
+      c.parent = el;
+    });
+    const all = () => el.children.flatMap(c => [c, ...c.querySelectorAll('*')]);
+    const matches = (n, part) => {
+      const [, t2, classes] = /^([a-z]*)((?:\.[\w-]+)*)$/.exec(part.trim());
+      return (!t2 || n.tag === t2) && classes.split('.').filter(Boolean).every(c => n.cls.includes(c));
+    };
+    el.querySelectorAll = sel => {
+      if (sel === '*') {
+        return all();
+      }
+      return all().filter(n =>
+        sel.split(',').some(one => {
+          const parts = one.split('>').map(p => p.trim());
+          return parts.length === 2 ? matches(n, parts[1]) && n.parent && matches(n.parent, parts[0]) : matches(n, parts[0]);
+        })
+      );
+    };
+    return el;
+  };
+  const src = fs.readFileSync(path.join(__dirname, '../Ats resume checker/app.js'), 'utf8');
+  const start = src.indexOf('function breakColumns(');
+  const breakColumns = new Function(`${src.slice(start, src.indexOf('function describeFit', start))}\nreturn breakColumns;`)();
+
+  const entry = node('div', 'cv-block', 60, 300, [node('div', 'cv-block-header-row', 60, 80), node('ul', 'cv-bullets', 80, 300)]);
+  const main = node('div', 'cv-main', 40, 1000, [node('div', 'cv-section', 40, 520, [node('div', 'cv-section-title', 40, 60), entry])]);
+  const side = node('div', 'cv-side', 40, 600, [
+    node('div', 'cv-section', 40, 300, [node('div', 'cv-section-title', 40, 60), node('ul', 'cv-bullets', 60, 300)]),
+  ]);
+  const page = node('div', 'resume', 0, 1000, [node('div', 'cv-name', 0, 40), node('div', 'cv-cols cv-side-left', 40, 1000, [main, side])]);
+
+  const cols = breakColumns(page, 1000);
+  assert.equal(cols.length, 2, 'main column and sidebar are measured separately');
+  assert.ok(cols[0].ranges.some(r => r.top === 60 && r.bottom === 300), 'an entry (.cv-block) is one unbreakable piece');
+  assert.ok(!cols[0].ranges.some(r => r.top === 40 && r.bottom === 520), 'a whole section of the main column may be split');
+  assert.ok(cols[1].ranges.some(r => r.top === 40 && r.bottom === 300), 'a sidebar section stays in one piece');
+  assert.equal(cols[0].bottom, 1000);
+
+  // single column: the page itself is the only column
+  const single = node('div', 'resume', 0, 800, [node('div', 'cv-name', 0, 40), node('div', 'cv-section', 40, 800, [node('div', 'cv-section-title', 40, 60), entry])]);
+  const one = breakColumns(single, 800);
+  assert.equal(one.length, 1);
+  assert.ok(one[0].ranges.some(r => r.top === 60 && r.bottom === 300));
+});
