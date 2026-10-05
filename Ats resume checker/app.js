@@ -409,6 +409,7 @@
     $('resume-page').innerHTML = ATS.renderHTML(tailored.sections, tailored.keywords, { ...opts(), ...format });
     $('tailored-output').value = ATS.renderText(tailored.sections, tailored.keywords, opts());
     fitResumeToScreen();
+    schedulePageFitNote();
   }
   function onTailor() {
     const resume = $('resume-text').value.trim();
@@ -559,7 +560,7 @@
   async function loadDocx() {
     return loadScript('assets/vendor/docx.umd.js', 'docx');
   }
-  function buildDocxDocument(sections, template) {
+  function buildDocxDocument(sections, template, fit = { zoom: 1, gap: 1 }) {
     const {
       Document, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType,
       HeadingLevel, AlignmentType, VerticalAlign, TabStopType,
@@ -567,8 +568,14 @@
     const style = template?.style || {};
     const font = String(style.font || 'Calibri').split(',')[0].replace(/['"]/g, '').trim() || 'Calibri';
     const accent = style.accent || '#111111';
-    const basePx = style.basePx || 11.5;
-    const lineHeight = style.lineHeight || 1.45;
+    // same fit as the printed PDF: text scale (zoom) and spacing (gap)
+    const zoom = fit?.zoom || 1;
+    const gap = fit?.gap || 1;
+    const sp = n => Math.round(n * gap);
+    const basePx = (style.basePx || 11.5) * zoom;
+    const lineHeight = (style.lineHeight || 1.45) * (gap < 1 ? 0.9 : 1);
+    const PAGE_MARGIN_V = 567; // 10 mm, like the printed page
+    const PAGE_MARGIN_H = 680; // 12 mm
     const headingTransform = style.headingTransform || 'uppercase';
     const nameAlign = style.nameAlign || 'left';
     const layout = template?.layout || 'single';
@@ -598,7 +605,7 @@
         // inside a table cell, "keep with next" makes Word / LibreOffice push the whole row to the next page
         ...(twoCols ? { keepNext: false, keepLines: false } : {}),
         alignment: AlignmentType.LEFT,
-        spacing: { before: 200, after: 100 },
+        spacing: { before: sp(200), after: sp(100) },
         border: { bottom: { color: accent.replace('#', ''), style: BorderStyle.SINGLE, size: 6 } },
       }));
     };
@@ -615,7 +622,7 @@
       })];
       target.push(new Paragraph({
         children: runs,
-        spacing: { line: Math.round(lineHeight * 240), before: 40, after: 40, ...options.spacing },
+        spacing: { line: Math.round(lineHeight * 240), before: sp(40), after: sp(40), ...options.spacing },
         alignment: options.alignment,
         indent: options.indent,
         bullet: options.bullet,
@@ -624,7 +631,7 @@
       }));
     };
     // right edge of the text area, used for right-aligned dates (single column only)
-    const rightTab = [{ type: TabStopType.RIGHT, position: 11906 - 2 * 1440 }];
+    const rightTab = [{ type: TabStopType.RIGHT, position: 11906 - 2 * PAGE_MARGIN_H }];
     const iconRun = kind => {
       const bytes = window.ResumeIcons ? ResumeIcons.png(kind, template?.iconColor || accent) : null;
       return bytes ? [new ImageRun({ data: bytes, transformation: { width: 13, height: 13 } }), new TextRun({ text: '  ', font })] : [];
@@ -637,19 +644,19 @@
         const lines = section.lines.map(l => l.trim()).filter(Boolean);
         if (!lines.length) {return;}
         const [name, ...rest] = lines;
-        addParagraph(name, { alignment: align, bold: true, color: accentHex, sizeScale: 2.0, spacing: { before: 0, after: 60, line: 340 } });
+        addParagraph(name, { alignment: align, bold: true, color: accentHex, sizeScale: 2.0, spacing: { before: sp(0), after: sp(60), line: 340 } });
         if (wantIcons && rest.length) {
           const items = ATS.contactItems(rest);
           const tagline = items.filter(i => !i.kind).map(i => i.text).join(' · ');
-          if (tagline) {addParagraph(tagline, { alignment: align, spacing: { before: 0, after: 60 } });}
+          if (tagline) {addParagraph(tagline, { alignment: align, spacing: { before: sp(0), after: sp(60) } });}
           const runs = [];
           items.filter(i => i.kind).forEach((item, i) => {
             if (i) {runs.push(new TextRun({ text: '      ', font }));}
             runs.push(...iconRun(item.kind), new TextRun({ text: item.text, font, size: Math.round(basePx * 2 * 0.92), color: '444444' }));
           });
-          head.push(new Paragraph({ children: runs, alignment: align, spacing: { before: 0, after: 200 } }));
+          head.push(new Paragraph({ children: runs, alignment: align, spacing: { before: sp(0), after: sp(200) } }));
         } else if (rest.length) {
-          addParagraph(rest.join(' · '), { alignment: align, spacing: { before: 0, after: 200, line: 240 } });
+          addParagraph(rest.join(' · '), { alignment: align, spacing: { before: sp(0), after: sp(200), line: 240 } });
         }
         return;
       }
@@ -669,9 +676,9 @@
             const { title: blockTitle, date } = ATS.splitHeader(header);
             const sub = headerIndex > 0 && blockTitle && !/\b(?:19|20)\d{2}\b/.test(date);
             if (!blockTitle && date) {
-              addParagraph(date, { italics: true, color: '555555', sizeScale: 0.95, alignment: sidebarCell() ? AlignmentType.LEFT : AlignmentType.LEFT, spacing: { before: 20, after: 40 } });
+              addParagraph(date, { italics: true, color: '555555', sizeScale: 0.95, alignment: sidebarCell() ? AlignmentType.LEFT : AlignmentType.LEFT, spacing: { before: sp(20), after: sp(40) } });
             } else if (sub) {
-              addParagraph(date ? `${blockTitle}   ${date}` : blockTitle, { italics: true, color: '333333', sizeScale: 0.95, spacing: { before: 0, after: 40 } });
+              addParagraph(date ? `${blockTitle}   ${date}` : blockTitle, { italics: true, color: '333333', sizeScale: 0.95, spacing: { before: sp(0), after: sp(40) } });
             } else if (date && !twoCols) {
               // title on the left, date flush right (one line, like the on-screen resume)
               addParagraph('', {
@@ -681,29 +688,28 @@
                 ],
                 tabStops: rightTab,
                 keepNext: true,
-                spacing: { before: 120, after: 20 },
+                spacing: { before: sp(120), after: sp(20) },
               });
             } else {
-              addParagraph(blockTitle, { bold: true, sizeScale: 1.05, keepNext: !twoCols, spacing: { before: 120, after: 20 } });
+              addParagraph(blockTitle, { bold: true, sizeScale: 1.05, keepNext: !twoCols, spacing: { before: sp(120), after: sp(20) } });
               if (date) {
-                addParagraph(date, { italics: true, color: '555555', sizeScale: 0.95, spacing: { before: 0, after: 40 } });
+                addParagraph(date, { italics: true, color: '555555', sizeScale: 0.95, spacing: { before: sp(0), after: sp(40) } });
               }
             }
           });
           block.bullets.map(ATS.stripBullets).filter(Boolean).forEach(bullet => {
-            addParagraph(bullet, { bullet: { level: 0 }, indent: { left: 720, hanging: 360 }, spacing: { before: 20, after: 20, line: Math.round(lineHeight * 240) } });
+            addParagraph(bullet, { bullet: { level: 0 }, indent: { left: 720, hanging: 360 }, spacing: { before: sp(20), after: sp(20), line: Math.round(lineHeight * 240) } });
           });
         });
       }
     });
 
     if (!twoCols) {
-      return new Document({ sections: [{ properties: {}, children: [...head, ...mainList] }] });
+      return new Document({ sections: [{ properties: { page: { margin: { top: PAGE_MARGIN_V, bottom: PAGE_MARGIN_V, left: PAGE_MARGIN_H, right: PAGE_MARGIN_H } } }, children: [...head, ...mainList] }] });
     }
 
     // two-column templates: a borderless 2-cell table under the header, shaded sidebar cell
-    const margin = 900;
-    const total = 11906 - margin * 2;
+    const total = 11906 - PAGE_MARGIN_H * 2;
     const sideW = Math.round(total * 0.31);
     const mainW = total - sideW;
     const none = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
@@ -727,7 +733,7 @@
     });
     return new Document({
       sections: [{
-        properties: { page: { margin: { top: margin, bottom: margin, left: margin, right: margin } } },
+        properties: { page: { margin: { top: PAGE_MARGIN_V, bottom: PAGE_MARGIN_V, left: PAGE_MARGIN_H, right: PAGE_MARGIN_H } } },
         children: [...head, table],
       }],
     });
@@ -741,7 +747,8 @@
     try {
       const docxLib = await loadDocx();
       if (!docxLib) {throw new Error('docx library failed to load');}
-      const doc = buildDocxDocument(tailored.sections, template);
+      const fit = computeFit();
+      const doc = buildDocxDocument(tailored.sections, template, fit && !fit.unmeasured ? fit : { zoom: 1, gap: 1 });
       const blob = await docxLib.Packer.toBlob(doc);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -760,6 +767,145 @@
     const btn = $('download-docx-btn');
     if (btn) {btn.addEventListener('click', exportDocx);}
   }, 0);
+  // ---- print page fit: 1 page whenever it can look good, otherwise 2 well-filled pages ----
+  const MM = 96 / 25.4;
+  const PAGE_W_MM = 210;
+  const PAGE_H_MM = 297;
+  const PAD_V_MM = 10;
+  const PAD_H_MM = 12;
+  const PAGE_TEXT_PX = (PAGE_H_MM - 2 * PAD_V_MM) * MM;
+
+  function setFitVars(zoom, gap) {
+    const page = $('resume-page');
+    page.style.setProperty('--cv-fit', String(zoom));
+    page.style.setProperty('--cv-gap', String(gap));
+    page.style.setProperty('--cv-lh', gap < 1 ? '0.9' : '1');
+  }
+  function clearFitVars() {
+    const page = $('resume-page');
+    if (page) {
+      ['--cv-fit', '--cv-gap', '--cv-lh'].forEach(name => page.style.removeProperty(name));
+    }
+  }
+
+  // content height, in pages of text area, when the resume is laid out exactly like the printed A4 page
+  function measureResumePages(zoom, gap) {
+    const page = $('resume-page');
+    const wrap = $('resume-page-scale');
+    const keepPage = page.getAttribute('style');
+    const keepWrap = wrap.getAttribute('style');
+    setFitVars(zoom, gap);
+    page.style.width = `${PAGE_W_MM}mm`;
+    page.style.maxWidth = 'none';
+    page.style.margin = '0';
+    page.style.transform = 'none';
+    page.style.borderRadius = '0';
+    page.style.padding = `${PAD_V_MM / zoom}mm ${PAD_H_MM / zoom}mm`;
+    wrap.style.cssText = `overflow:visible;height:auto;width:${PAGE_W_MM}mm`;
+    const total = wrap.getBoundingClientRect().height - 2 * PAD_V_MM * MM;
+    const columns = breakColumns(page, total);
+    keepPage === null ? page.removeAttribute('style') : page.setAttribute('style', keepPage);
+    keepWrap === null ? wrap.removeAttribute('style') : wrap.setAttribute('style', keepWrap);
+    // the unbreakable pieces (entries, bullet lists, headings) decide where the real page breaks fall
+    return Math.max(total / PAGE_TEXT_PX, ATS.simulatePageBreaks(columns, PAGE_TEXT_PX));
+  }
+
+  // Unbreakable ranges of each text column, in printed pixels (same rules as the @media print block in styles.css).
+  function breakColumns(page, total) {
+    const first = page.firstElementChild;
+    const last = page.lastElementChild;
+    if (!first || !last) {
+      return [];
+    }
+    const top0 = first.getBoundingClientRect().top;
+    const span = Math.max(1, last.getBoundingClientRect().bottom - top0);
+    // rects may be reported zoomed or unzoomed: normalise them to the measured printed height
+    const k = total / span;
+    const rel = el => {
+      const r = el.getBoundingClientRect();
+      return { top: (r.top - top0) * k, bottom: (r.bottom - top0) * k };
+    };
+    const twoCols = page.querySelectorAll('.cv-cols > .cv-main, .cv-cols > .cv-side');
+    const roots = twoCols.length ? [...twoCols] : [page];
+    return roots.map(root => {
+      const ranges = [];
+      const sidebar = root.classList.contains('cv-side');
+      root.querySelectorAll('.cv-block, ul.cv-bullets, .cv-block-header-row, .cv-section-title, .cv-section').forEach(el => {
+        if (el.classList.contains('cv-section') && !sidebar) {
+          return;
+        }
+        const r = rel(el);
+        if (el.classList.contains('cv-section-title')) {
+          // a heading is kept together with the first lines that follow it
+          r.bottom = Math.min(r.bottom + 34 * k, el.nextElementSibling ? rel(el.nextElementSibling).bottom : r.bottom + 34 * k);
+        }
+        ranges.push(r);
+      });
+      return { bottom: Math.max(...ranges.map(r => r.bottom), rel(root).bottom), ranges };
+    });
+  }
+
+  function computeFit() {
+    const wrap = $('resume-page-scale');
+    if (!tailored || !wrap || !$('resume-page').firstChild) {
+      return null;
+    }
+    // the preview step can be hidden (PDF button on the last step): measure it off-screen
+    let host = null;
+    let marker = null;
+    if (!wrap.offsetWidth) {
+      host = document.createElement('div');
+      host.style.cssText = `position:fixed;left:-10000px;top:0;visibility:hidden;width:${PAGE_W_MM}mm`;
+      marker = document.createComment('fit-anchor');
+      wrap.before(marker);
+      host.appendChild(wrap);
+      document.body.appendChild(host);
+    }
+    try {
+      return ATS.choosePageFit(measureResumePages);
+    } finally {
+      if (host) {
+        marker.replaceWith(wrap);
+        host.remove();
+      }
+    }
+  }
+
+  function describeFit(fit) {
+    if (!fit || fit.unmeasured) {
+      return '';
+    }
+    if (fit.pages === 1) {
+      const adjusted = fit.zoom < 0.995 || fit.gap < 1;
+      return `Print layout: fits on 1 page${adjusted ? ` (spacing and text size adjusted automatically, ${Math.round(fit.zoom * 100)}%)` : ''}`;
+    }
+    return `Print layout: ${fit.pages} pages (last page ${Math.round(fit.fill * 100)}% full)`;
+  }
+
+  let fitNoteTimer = null;
+  function updatePageFitNote() {
+    const note = $('page-fit-note');
+    if (note && tailored) {
+      note.textContent = describeFit(computeFit());
+    }
+  }
+  function schedulePageFitNote() {
+    clearTimeout(fitNoteTimer);
+    fitNoteTimer = setTimeout(updatePageFitNote, 80);
+  }
+
+  function applyPageFit() {
+    if (document.body.classList.contains('print-cover-letter')) {
+      return;
+    }
+    const fit = computeFit();
+    if (fit && !fit.unmeasured) {
+      setFitVars(fit.zoom, fit.gap);
+    }
+  }
+
+  Object.assign(window.ATSApp, { measureResumePages, computeFit });
+
   // ---- print ----
   let printMarker = null,
     printVpOriginal = null,
@@ -797,9 +943,13 @@
       vp.setAttribute('content', printVpOriginal);
       printVpOriginal = null;
     }
+    clearFitVars();
     fitResumeToScreen();
   }
-  window.addEventListener('beforeprint', preparePrint);
+  window.addEventListener('beforeprint', () => {
+    preparePrint();
+    applyPageFit();
+  });
   window.addEventListener('afterprint', restoreAfterPrint);
 
   function confirmLossyExport() {
@@ -818,6 +968,7 @@
     window.addEventListener('afterprint', restoreTitle, { once: true });
     setTimeout(restoreTitle, 2500);
     preparePrint();
+    applyPageFit();
     requestAnimationFrame(() => requestAnimationFrame(window.print));
   });
 
