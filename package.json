@@ -8,7 +8,7 @@
     "build:css": "tailwindcss -i ./tailwind.input.css -o './Ats resume checker/tailwind.generated.css' --content './Ats resume checker/index.html' './Ats resume checker/*.js' './Ats resume checker/resume-templates/*.js' --minify",
     "dev": "npx serve 'Ats resume checker'",
     "test": "node --test test/*.test.js",
-    "check": "node --check 'Ats resume checker/skills-data.js' && node --check 'Ats resume checker/app.js' && node --check 'Ats resume checker/engine.js' && node --check 'Ats resume checker/stepper.js' && node --check 'Ats resume checker/resume-templates/selector.js'",
+    "check": "node --check api/analyze-resume.js && node --check 'Ats resume checker/skills-data.js' && node --check 'Ats resume checker/app.js' && node --check 'Ats resume checker/engine.js' && node --check 'Ats resume checker/stepper.js' && node --check 'Ats resume checker/resume-templates/selector.js'",
     "lint": "eslint \"Ats resume checker/**/*.js\" \"test/**/*.js\"",
     "format": "prettier --write \"Ats resume checker/**/*.js\" \"test/**/*.js\" \"Ats resume checker/index.html\"",
     "format:check": "prettier --check \"Ats resume checker/**/*.js\" \"test/**/*.js\" \"Ats resume checker/index.html\"",
