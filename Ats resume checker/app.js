@@ -5,7 +5,8 @@
   let tailored = null,
     template = null,
     optimizerReport = null,
-    originalResumeText = '';
+    originalResumeText = '',
+    finalResumeApproved = false;
   const MAX_FILE_BYTES = 5 * 1024 * 1024;
   const MAX_PDF_PAGES = 15;
   const MAX_EXTRACTED_CHARS = 120000;
@@ -64,6 +65,7 @@
     tailored = null;
     optimizerReport = null;
     originalResumeText = '';
+    finalResumeApproved = false;
     $('analysis-result').classList.add('hidden');
     $('placeholder-result').classList.remove('hidden');
     $('tailored-section').classList.add('hidden');
@@ -74,6 +76,9 @@
     if ($('cover-letter-status')) {$('cover-letter-status').textContent = '';}
     if ($('optimizer-changes')) {$('optimizer-changes').replaceChildren(); $('optimizer-changes').classList.add('hidden');}
     if ($('optimizer-details')) {$('optimizer-details').replaceChildren(); $('optimizer-details').classList.add('hidden');}
+    if ($('optimizer-highlighted-resume')) {$('optimizer-highlighted-resume').replaceChildren();}
+    if ($('confirm-selected-btn')) {$('confirm-selected-btn').textContent = 'Confirm Selected Changes & Create Final Resume';}
+    if ($('optimizer-status')) {$('optimizer-status').textContent = '';}
   }
 
   // ---- localStorage session persistence ----
@@ -417,7 +422,33 @@
     fitResumeToScreen();
     schedulePageFitNote();
   }
-  function onTailor() {
+  async function requestGeminiAnalysis(resume, jd) {
+    const response = await fetch('/api/analyze-resume', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resumeText: resume, jobDescription: jd }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'AI analysis unavailable');
+    return payload;
+  }
+  function mergeAIReport(resume, jd, ai) {
+    const local = ATSOptimizer.analyze(resume, jd);
+    const optimizedText = String(ai.optimizedResume || '').trim();
+    const optimized = ATSOptimizer.scoreBreakdown(optimizedText, jd);
+    return {
+      ...local,
+      optimizedText,
+      optimized,
+      changes: ATSOptimizer.diff(resume, optimizedText),
+      issues: Array.isArray(ai.issues) && ai.issues.length ? ai.issues : local.issues,
+      warnings: [...new Set([...(local.warnings || []), ...(ai.warnings || [])])],
+      aiSummary: Array.isArray(ai.summary) ? ai.summary : [],
+      suggestedSkills: Array.isArray(ai.suggestedSkills) ? ai.suggestedSkills : [],
+      provider: `Gemini AI${ai.model ? ` · ${ai.model}` : ''}`,
+    };
+  }
+  async function onTailor() {
     const resume = $('resume-text').value.trim();
     const resumeError = validateResume();
     if (resumeError) {
@@ -425,9 +456,21 @@
     }
     hideError();
     originalResumeText = resume;
-    optimizerReport = window.ATSOptimizer
-      ? ATSOptimizer.analyze(resume, $('jd-text').value.trim())
-      : null;
+    finalResumeApproved = false;
+    const jd = $('jd-text').value.trim();
+    const button = $('tailor-btn');
+    if (button) {button.disabled = true; button.textContent = 'Analyzing complete resume…';}
+    if ($('optimizer-status')) {$('optimizer-status').textContent = 'Gemini is reading the complete resume and checking every section. Your key stays on the server.';}
+    try {
+      const ai = await requestGeminiAnalysis(resume, jd);
+      optimizerReport = mergeAIReport(resume, jd, ai);
+    } catch (error) {
+      optimizerReport = window.ATSOptimizer ? ATSOptimizer.analyze(resume, jd) : null;
+      if ($('optimizer-status')) {$('optimizer-status').textContent = `Gemini unavailable: ${error.message} Local full-document fallback is active.`;}
+      if ($('optimizer-provider')) {$('optimizer-provider').textContent = 'Local fallback';}
+    } finally {
+      if (button) {button.disabled = false; button.textContent = 'Generate Tailored Resume →';}
+    }
     tailored = ATS.tailor(optimizerReport?.optimizedText || resume, $('jd-text').value.trim());
     applyOrder();
     render();
@@ -446,18 +489,23 @@
     $('optimizer-original-score').textContent = `${original}/100`;
     $('optimizer-optimized-score').textContent = `${improved}/100`;
     $('optimizer-improvement').textContent = `${delta >= 0 ? '+' : ''}${delta} points`;
+    if ($('optimizer-provider')) $('optimizer-provider').textContent = r.provider || 'Local fallback';
+    if ($('optimizer-status') && r.provider) $('optimizer-status').textContent = 'Complete resume analysis finished. Review each highlighted change before approval.';
     const categories = $('optimizer-categories'); categories.replaceChildren();
     Object.entries(r.optimized.checks).forEach(([name, score]) => {
       const row = document.createElement('div'); row.className = 'flex justify-between gap-3 border-b border-slate-800 pb-1';
-      row.innerHTML = `<span>${escapeHtml(name)}</span><strong>${score}/100</strong>`; categories.append(row);
+      row.innerHTML = `<span>${escapeHtml(name)}</span><strong>${score == null ? 'N/A' : `${score}/100`}</strong>`; categories.append(row);
     });
     const summary = $('optimizer-summary'); summary.replaceChildren();
     [
-      `${r.issues.filter(i => i.type === 'Spelling').length} spelling issue(s) checked`,
-      `${r.issues.filter(i => i.type === 'Weak wording').length} weak bullet(s) improved`,
-      `${r.changes.length} line-level change(s) made`,
+      `${r.issues.filter(i => /Spelling/.test(i.type)).length} spelling issue(s) corrected`,
+      `${r.issues.filter(i => /Grammar/.test(i.type)).length} grammar issue(s) corrected`,
+      `${r.changes.length} line-level change(s) proposed`,
+      `${r.issues.filter(i => /Bullet/.test(i.type)).length} bullet point(s) improved or added`,
       `${r.missingKeywords.length} JD keyword(s) need evidence or review`,
       'No facts, jobs, skills, degrees or achievements were invented',
+      ...(r.aiSummary || []).slice(0, 4),
+      ...(r.suggestedSkills?.length ? [`${r.suggestedSkills.length} suggested skill(s) require your evidence`] : []),
     ].forEach(text => { const li = document.createElement('li'); li.textContent = '✓ ' + text; summary.append(li); });
     const warnings = $('optimizer-warnings'); warnings.replaceChildren();
     if (r.warnings.length) { warnings.classList.remove('hidden'); const title = document.createElement('strong'); title.textContent = 'ATS warnings: '; warnings.append(title, document.createTextNode(r.warnings.join(' '))); }
@@ -467,25 +515,62 @@
       const card = document.createElement('div'); card.className = 'rounded-lg bg-slate-950 border border-slate-800 p-3 text-xs';
       card.innerHTML = `<strong>${escapeHtml(issue.type)}</strong><p class="text-slate-400 mt-1"><span class="text-rose-300">Before:</span> ${escapeHtml(issue.before)}<br><span class="text-emerald-300">After:</span> ${escapeHtml(issue.after)}<br><span class="text-slate-500">Why:</span> ${escapeHtml(issue.reason)}</p>`; details.append(card);
     });
+    renderHighlightedResume();
+  }
+  function renderHighlightedResume() {
+    const box = $('optimizer-highlighted-resume'), r = optimizerReport;
+    if (!box || !r) return;
+    box.replaceChildren();
+    const changed = new Set(r.changes.map(change => change.line));
+    String(r.optimizedText || '').split('\n').forEach((line, index) => {
+      const row = document.createElement('div');
+      if (changed.has(index + 1)) {
+        row.className = 'bg-yellow-300/20 text-yellow-100 rounded px-1';
+        const mark = document.createElement('mark'); mark.className = 'bg-yellow-300 text-slate-950 rounded px-0.5'; mark.textContent = line || ' ';
+        row.append(mark);
+      } else row.textContent = line || ' ';
+      box.append(row);
+    });
   }
   function renderOptimizerChanges() {
     const r = optimizerReport, box = $('optimizer-changes'); if (!r || !box) return;
     box.replaceChildren();
     r.changes.slice(0, 30).forEach(change => {
       const card = document.createElement('div'); card.className = 'rounded-lg border border-slate-800 bg-slate-950 p-3 text-xs';
-      card.innerHTML = `<p class="text-slate-500 mb-1">Line ${change.line} · ${change.type}</p><p class="text-rose-200 bg-rose-500/10 p-2 rounded">${escapeHtml(change.before || '(removed)')}</p><p class="text-emerald-200 bg-emerald-500/10 p-2 rounded mt-1">${escapeHtml(change.after || '(removed)')}</p>`; box.append(card);
+      const label = document.createElement('label'); label.className = 'flex items-center gap-2 mb-2 font-semibold';
+      const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.className = 'accent-violet-500 change-select'; checkbox.checked = true; checkbox.dataset.line = String(change.line);
+      label.append(checkbox, document.createTextNode(`Use this change · line ${change.line} · ${change.type}`));
+      card.append(label);
+      const before = document.createElement('p'); before.className = 'text-rose-200 bg-rose-500/10 p-2 rounded'; before.textContent = change.before || '(removed)';
+      const after = document.createElement('p'); after.className = 'text-emerald-200 bg-emerald-500/10 p-2 rounded mt-1'; after.textContent = change.after || '(removed)';
+      card.append(before, after); box.append(card);
     });
     box.classList.toggle('hidden', !r.changes.length);
   }
+  function confirmSelectedChanges() {
+    if (!optimizerReport) return;
+    const selected = new Set([...document.querySelectorAll('.change-select:checked')].map(el => Number(el.dataset.line)));
+    const sourceLines = String(originalResumeText).replace(/\r/g, '').split('\n');
+    optimizerReport.changes.forEach(change => {
+      if (selected.has(change.line)) sourceLines[change.line - 1] = change.after;
+    });
+    const finalText = sourceLines.join('\n');
+    tailored = ATS.tailor(finalText, $('jd-text').value.trim());
+    finalResumeApproved = true;
+    applyOrder(); render();
+    $('confirm-selected-btn').textContent = 'Final Resume Created ✓';
+    flash($('download-clean-btn'), 'Ready to export');
+  }
   function restoreOriginalResume() {
     if (!originalResumeText) return;
-    tailored = ATS.tailor(originalResumeText, $('jd-text').value.trim()); applyOrder(); render(); flash($('restore-original-btn'), 'Restored');
+    tailored = ATS.tailor(originalResumeText, $('jd-text').value.trim()); finalResumeApproved = false; applyOrder(); render(); flash($('restore-original-btn'), 'Restored');
   }
   $('show-changes-btn')?.addEventListener('click', () => {
     const details = $('optimizer-details'); details.classList.toggle('hidden'); renderOptimizerChanges();
     $('show-changes-btn').textContent = details.classList.contains('hidden') ? 'View Changes' : 'Hide Changes';
   });
   $('restore-original-btn')?.addEventListener('click', restoreOriginalResume);
+  $('confirm-selected-btn')?.addEventListener('click', confirmSelectedChanges);
   $('download-clean-btn')?.addEventListener('click', () => { $('jd-only-toggle').checked = false; $('download-btn').click(); });
 
   $('analyze-btn').addEventListener('click', onAnalyze);
@@ -1014,6 +1099,10 @@
   window.addEventListener('afterprint', restoreAfterPrint);
 
   function confirmLossyExport() {
+    if (!finalResumeApproved) {
+      showError('Please review the highlighted changes and click “Confirm Selected Changes & Create Final Resume” before exporting.');
+      return false;
+    }
     return (
       !$('jd-only-toggle').checked ||
       window.confirm('Only JD-relevant lines is enabled. Exporting may omit unrelated resume content. Continue?')
