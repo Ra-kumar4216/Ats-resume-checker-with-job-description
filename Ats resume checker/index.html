@@ -709,6 +709,7 @@
                       <p class="text-xs uppercase tracking-wider text-violet-300 font-semibold">AI Resume Optimizer</p>
                       <h3 class="font-bold text-lg mt-1">Analyze &rarr; Explain &rarr; Improve &rarr; Re-score</h3>
                       <p class="text-sm text-slate-400 mt-1">Privacy-first local optimization. No resume is uploaded and no API key is required.</p>
+                      <p id="optimizer-status" class="text-xs text-slate-400 mt-2" role="status" aria-live="polite"></p>
                     </div>
                     <span id="optimizer-provider" class="text-xs rounded-full px-2.5 py-1 bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">Local optimizer</span>
                   </div>
@@ -722,9 +723,17 @@
                     <div><h4 class="text-sm font-semibold mb-2">What's improved?</h4><ul id="optimizer-summary" class="text-xs text-slate-300 space-y-1"></ul></div>
                   </div>
                   <div id="optimizer-warnings" class="hidden rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200"></div>
+                  <div class="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4 space-y-2">
+                    <div class="flex items-center justify-between gap-3 flex-wrap">
+                      <h4 class="text-sm font-semibold">Optimized resume — changes highlighted</h4>
+                      <span class="text-xs text-yellow-200">Yellow = proposed change</span>
+                    </div>
+                    <div id="optimizer-highlighted-resume" class="text-xs leading-6 whitespace-pre-wrap rounded bg-slate-950 border border-slate-800 p-3 max-h-72 overflow-auto"></div>
+                  </div>
                   <div class="flex flex-wrap gap-2">
                     <button id="show-changes-btn" type="button" class="bg-violet-600 hover:bg-violet-500 px-3 py-2 rounded-lg text-xs font-semibold">View Changes</button>
                     <button id="restore-original-btn" type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 rounded-lg text-xs">Restore Original</button>
+                    <button id="confirm-selected-btn" type="button" class="bg-amber-600 hover:bg-amber-500 px-3 py-2 rounded-lg text-xs font-semibold">Confirm Selected Changes &amp; Create Final Resume</button>
                     <button id="download-clean-btn" type="button" class="bg-emerald-600 hover:bg-emerald-500 px-3 py-2 rounded-lg text-xs font-semibold">Download Clean Resume</button>
                   </div>
                   <div id="optimizer-changes" class="hidden grid md:grid-cols-2 gap-3"></div>
