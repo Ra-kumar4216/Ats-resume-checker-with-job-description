@@ -703,6 +703,33 @@
               </div>
 
               <section id="tailored-section" class="hidden space-y-4">
+                <section id="optimizer-dashboard" class="bg-slate-900 border border-violet-500/30 rounded-xl p-5 space-y-5" aria-live="polite">
+                  <div class="flex items-start justify-between gap-4 flex-wrap">
+                    <div>
+                      <p class="text-xs uppercase tracking-wider text-violet-300 font-semibold">AI Resume Optimizer</p>
+                      <h3 class="font-bold text-lg mt-1">Analyze &rarr; Explain &rarr; Improve &rarr; Re-score</h3>
+                      <p class="text-sm text-slate-400 mt-1">Privacy-first local optimization. No resume is uploaded and no API key is required.</p>
+                    </div>
+                    <span id="optimizer-provider" class="text-xs rounded-full px-2.5 py-1 bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">Local optimizer</span>
+                  </div>
+                  <div class="grid sm:grid-cols-3 gap-3">
+                    <div class="rounded-lg bg-slate-950 border border-slate-800 p-4"><p class="text-xs text-slate-400">Original ATS score</p><strong id="optimizer-original-score" class="block text-2xl mt-1">—</strong></div>
+                    <div class="rounded-lg bg-slate-950 border border-slate-800 p-4"><p class="text-xs text-slate-400">Optimized ATS score</p><strong id="optimizer-optimized-score" class="block text-2xl mt-1 text-emerald-300">—</strong></div>
+                    <div class="rounded-lg bg-slate-950 border border-slate-800 p-4"><p class="text-xs text-slate-400">Improvement</p><strong id="optimizer-improvement" class="block text-2xl mt-1 text-violet-300">—</strong></div>
+                  </div>
+                  <div class="grid md:grid-cols-2 gap-4">
+                    <div><h4 class="text-sm font-semibold mb-2">Category scores</h4><div id="optimizer-categories" class="space-y-1.5 text-xs"></div></div>
+                    <div><h4 class="text-sm font-semibold mb-2">What's improved?</h4><ul id="optimizer-summary" class="text-xs text-slate-300 space-y-1"></ul></div>
+                  </div>
+                  <div id="optimizer-warnings" class="hidden rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200"></div>
+                  <div class="flex flex-wrap gap-2">
+                    <button id="show-changes-btn" type="button" class="bg-violet-600 hover:bg-violet-500 px-3 py-2 rounded-lg text-xs font-semibold">View Changes</button>
+                    <button id="restore-original-btn" type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 rounded-lg text-xs">Restore Original</button>
+                    <button id="download-clean-btn" type="button" class="bg-emerald-600 hover:bg-emerald-500 px-3 py-2 rounded-lg text-xs font-semibold">Download Clean Resume</button>
+                  </div>
+                  <div id="optimizer-changes" class="hidden grid md:grid-cols-2 gap-3"></div>
+                  <div id="optimizer-details" class="hidden border-t border-slate-800 pt-4 space-y-2"></div>
+                </section>
                 <section class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
                   <div>
                     <h3 class="font-bold text-base">Choose Resume Template</h3>
@@ -1063,6 +1090,7 @@
     <script src="resume-icons.js"></script>
     <script src="resume-templates/selector.js"></script>
     <script src="engine.js"></script>
+    <script src="optimizer.js"></script>
     <script src="app.js"></script>
     <script src="stepper.js"></script>
   </body>
