@@ -28,6 +28,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
       "source": "/assets/vendor/(.*)",
       "destination": "/Ats resume checker/assets/vendor/$1"
     },
