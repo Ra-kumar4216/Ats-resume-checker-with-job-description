@@ -11,7 +11,7 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,
 /* #resume-page-scale wraps #resume-page and is used by app.js to shrink the whole
    page down to fit narrow/phone screens without reflowing the resume's own layout. */
 #resume-page-scale{overflow:hidden}
-#resume-page{background:#fff;color:#1a1a1a;font-family:var(--cv-font,Calibri,Arial,sans-serif);line-height:var(--cv-line-height,1.45);max-width:700px;margin:0 auto;padding:36px 40px;border-radius:6px}
+#resume-page{background:#fff;color:#1a1a1a;font-family:var(--cv-font,Calibri,Arial,sans-serif);line-height:calc(var(--cv-line-height,1.45) * var(--cv-lh,1));zoom:var(--cv-fit,1);max-width:700px;margin:0 auto;padding:36px 40px;border-radius:6px}
 #resume-page .cv-name{font-size:24px;font-weight:700;color:var(--cv-accent,#1d4ed8);text-align:var(--cv-name-align,left);margin-bottom:3px}
 #resume-page .cv-nw{white-space:nowrap}
 
@@ -37,26 +37,26 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,
 #resume-page .cv-side .cv-skills-line{overflow-wrap:anywhere}
 #resume-page .cv-block-sub-title{font-style:italic;font-weight:400}
 #resume-page .cv-block-sub{font-style:italic;font-size:.95em;margin:0 0 3px}
-#resume-page .cv-contact{font-size:11px;color:#555;text-align:var(--cv-name-align,left);margin-bottom:14px}
-#resume-page .cv-section{margin-top:14px}
-#resume-page .cv-section-title{font-size:12.5px;font-weight:700;letter-spacing:.7px;text-transform:var(--cv-heading-transform,uppercase);border-bottom:var(--cv-heading-rule,1.5px solid #1a1a1a);padding-bottom:2px;margin-bottom:6px}
-#resume-page .cv-block-header-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:8px}
+#resume-page .cv-contact{font-size:11px;color:#555;text-align:var(--cv-name-align,left);margin-bottom:calc(14px * var(--cv-gap,1))}
+#resume-page .cv-section{margin-top:calc(14px * var(--cv-gap,1))}
+#resume-page .cv-section-title{font-size:12.5px;font-weight:700;letter-spacing:.7px;text-transform:var(--cv-heading-transform,uppercase);border-bottom:var(--cv-heading-rule,1.5px solid #1a1a1a);padding-bottom:2px;margin-bottom:calc(6px * var(--cv-gap,1))}
+#resume-page .cv-block-header-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:calc(8px * var(--cv-gap,1))}
 #resume-page .cv-block-title{font-size:12.5px;font-weight:700}
 #resume-page .cv-block-date{font-size:11px;font-style:italic;color:#555;white-space:nowrap}
 #resume-page .cv-block-date-only{font-size:11px;font-style:italic;color:#555;margin:2px 0 4px}
-#resume-page ul.cv-bullets{margin:2px 0 4px;padding-left:18px;list-style-type:var(--cv-bullet,disc)}
-#resume-page li,#resume-page p{font-size:var(--cv-base-px,11.5px);margin:2px 0}
+#resume-page ul.cv-bullets{margin:calc(2px * var(--cv-gap,1)) 0 calc(4px * var(--cv-gap,1));padding-left:18px;list-style-type:var(--cv-bullet,disc)}
+#resume-page li,#resume-page p{font-size:var(--cv-base-px,11.5px);margin:calc(2px * var(--cv-gap,1)) 0;orphans:2;widows:2}
 mark.kw-hit{background:#fef08a;color:#1a1a1a;padding:0 1px;border-radius:2px}
 @media print{
-  @page{size:auto;margin:0}
+  @page{size:A4;margin:0}
   html,body{background:#fff!important;margin:0!important}
   html>*:not(body){display:none!important}
   body>*{display:none!important}
   body>#resume-page-scale{display:block!important;overflow:visible!important;height:auto!important}
-  #resume-page{max-width:none!important;width:auto!important;transform:none!important;margin:0!important;border-radius:0;padding:10mm 12mm!important;-webkit-box-decoration-break:clone;box-decoration-break:clone}
-  #resume-page .cv-section{break-inside:avoid;page-break-inside:avoid}
-  #resume-page .cv-block-header-row{break-inside:avoid;page-break-inside:avoid}
-  #resume-page .cv-section-title{break-after:avoid;page-break-after:avoid}
+  #resume-page{max-width:none!important;width:auto!important;transform:none!important;margin:0!important;border-radius:0;padding:calc(10mm / var(--cv-fit,1)) calc(12mm / var(--cv-fit,1))!important;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+  /* a whole section may flow onto the next page; single entries, bullet lists and sidebar sections stay in one piece */
+  #resume-page .cv-block,#resume-page ul.cv-bullets,#resume-page .cv-block-header-row,#resume-page .cv-side .cv-section{break-inside:avoid;page-break-inside:avoid}
+  #resume-page .cv-section-title,#resume-page .cv-block-header-row,#resume-page .cv-block-sub,#resume-page .cv-block-date-only{break-after:avoid;page-break-after:avoid}
   mark.kw-hit{background:none;padding:0}
 }
 
