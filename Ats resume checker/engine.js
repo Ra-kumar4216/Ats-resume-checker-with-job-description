@@ -1392,6 +1392,8 @@
       // Experience / Projects / Other
       else {
         splitBlocks(section.lines).forEach(block => {
+          // one entry (company / role / date / bullets) is kept together when the page breaks
+          html += '<div class="cv-block">';
           block.header
             .map(header => header.trim())
             .filter(Boolean)
@@ -1422,6 +1424,7 @@
           if (items.length) {
             html += '<ul class="cv-bullets">' + items.map(item => `<li>${H(item)}</li>`).join('') + '</ul>';
           }
+          html += '</div>';
         });
       }
 
@@ -1429,6 +1432,147 @@
     });
 
     return html;
+  }
+
+  // ============================================================
+  // PAGE FIT (print / PDF)
+  // ============================================================
+
+  /**
+   * Print layout simulation. The browser never splits a resume entry (`break-inside: avoid`) and never leaves a
+   * heading alone at the bottom of a page, so the real number of pages is larger than "content height / page height".
+   * `columns` = [{ bottom, ranges: [{ top, bottom }] }] in the same unit as `pageH` (one entry per text column;
+   * ranges are the unbreakable pieces in document order). Returns the effective height in pages.
+   */
+  function simulatePageBreaks(columns, pageH) {
+    let worst = 0;
+    (columns || []).forEach(col => {
+      let shift = 0;
+      const ranges = [...(col.ranges || [])].sort((a, b) => a.top - b.top || b.bottom - a.bottom);
+      let lastBottom = -Infinity;
+      ranges.forEach(r => {
+        if (r.bottom <= lastBottom + 0.5) {
+          return; // nested inside a piece that was already placed
+        }
+        lastBottom = r.bottom;
+        const top = r.top + shift;
+        const bottom = r.bottom + shift;
+        if (bottom - top > pageH) {
+          return; // taller than a page: the browser has to split it
+        }
+        const pageEnd = (Math.floor(top / pageH + 1e-9) + 1) * pageH;
+        if (bottom > pageEnd + 0.5 && top < pageEnd - 0.5) {
+          shift += pageEnd - top; // moved whole to the top of the next page
+        }
+      });
+      worst = Math.max(worst, col.bottom + shift);
+    });
+    return worst / pageH;
+  }
+
+  /**
+   * Decide how the resume is laid out on paper. `measure(zoom, gap)` returns the content height in pages
+   * (1 = exactly one full page of text area) for a text scale `zoom` and a spacing multiplier `gap`.
+   *   - fits on 1 page  -> 1 page (spacing is tightened first, the font only shrinks as the last resort)
+   *   - needs more      -> 2 pages, and page 2 is at least `fill` full (text is made a bit larger if needed)
+   * Returns { zoom, gap, pages, fill }.
+   */
+  function choosePageFit(measure, options = {}) {
+    const o = { floor: 0.9, softFloor: 0.95, ceilOne: 1.08, ceilMany: 1.12, tightGap: 0.7, fill: 0.55, safety: 0.975, ...options };
+    const cache = new Map();
+    const m = (zoom, gap) => {
+      const key = `${zoom.toFixed(4)}|${gap}`;
+      if (!cache.has(key)) {
+        cache.set(key, Number(measure(zoom, gap)));
+      }
+      return cache.get(key);
+    };
+    const done = (zoom, gap, pages) => ({
+      zoom: Math.floor(zoom * 1000 + 1e-6) / 1000, // never round up past the limit that was just measured
+      gap,
+      pages,
+      fill: Math.max(0, Math.min(1, Math.round((m(zoom, gap) - (pages - 1)) * 100) / 100)),
+    });
+
+    if (!(m(1, 1) > 0)) {
+      return { zoom: 1, gap: 1, pages: 1, fill: 0, unmeasured: true };
+    }
+
+    // the largest zoom in [lo, hi] that still stays within `limit` pages (height grows with zoom)
+    const largest = (lo, hi, gap, limit) => {
+      if (m(lo, gap) > limit) {
+        return null;
+      }
+      if (m(hi, gap) <= limit) {
+        return hi;
+      }
+      let a = lo;
+      let b = hi;
+      for (let i = 0; i < 9; i += 1) {
+        const mid = (a + b) / 2;
+        if (m(mid, gap) <= limit) {
+          a = mid;
+        } else {
+          b = mid;
+        }
+      }
+      return a;
+    };
+    // the smallest zoom in [lo, hi] that reaches at least `target` pages
+    const smallest = (lo, hi, gap, target) => {
+      if (m(lo, gap) >= target) {
+        return lo;
+      }
+      if (m(hi, gap) < target) {
+        return hi;
+      }
+      let a = lo;
+      let b = hi;
+      for (let i = 0; i < 9; i += 1) {
+        const mid = (a + b) / 2;
+        if (m(mid, gap) >= target) {
+          b = mid;
+        } else {
+          a = mid;
+        }
+      }
+      return b;
+    };
+
+    // 1) one page: normal spacing, then tight spacing, and only then a smaller font
+    for (const [gap, floor] of [
+      [1, o.softFloor],
+      [o.tightGap, o.softFloor],
+      [o.tightGap, o.floor],
+    ]) {
+      const zoom = largest(floor, o.ceilOne, gap, o.safety);
+      if (zoom !== null) {
+        return done(zoom, gap, 1);
+      }
+    }
+
+    // 2) more pages: the last page has to be at least `fill` full
+    for (let pages = 2; pages <= 4; pages += 1) {
+      const limit = pages * o.safety;
+      const natural = m(1, 1);
+      if (natural <= limit) {
+        const wanted = pages - 1 + o.fill;
+        if (natural >= wanted) {
+          return done(1, 1, pages);
+        }
+        const up = smallest(1, o.ceilMany, 1, wanted);
+        const cap = largest(1, o.ceilMany, 1, limit) ?? 1;
+        return done(Math.min(up, cap), 1, pages);
+      }
+      for (const gap of [1, o.tightGap]) {
+        const zoom = largest(o.floor, 1, gap, limit);
+        if (zoom !== null) {
+          return done(zoom, gap, pages);
+        }
+      }
+    }
+
+    return done(1, 1, Math.max(1, Math.ceil(m(1, 1))));
   }
 
   // ============================================================
@@ -2017,6 +2161,10 @@
     parseSections,
 
     cleanExtractedText,
+
+    choosePageFit,
+
+    simulatePageBreaks,
 
     pageText,
 
