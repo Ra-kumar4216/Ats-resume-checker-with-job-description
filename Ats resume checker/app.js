@@ -3,7 +3,9 @@
 (function () {
   const $ = id => document.getElementById(id);
   let tailored = null,
-    template = null;
+    template = null,
+    optimizerReport = null,
+    originalResumeText = '';
   const MAX_FILE_BYTES = 5 * 1024 * 1024;
   const MAX_PDF_PAGES = 15;
   const MAX_EXTRACTED_CHARS = 120000;
@@ -60,6 +62,8 @@
   };
   function resetResults() {
     tailored = null;
+    optimizerReport = null;
+    originalResumeText = '';
     $('analysis-result').classList.add('hidden');
     $('placeholder-result').classList.remove('hidden');
     $('tailored-section').classList.add('hidden');
@@ -68,6 +72,8 @@
     if ($('cover-letter-result')) {$('cover-letter-result').classList.add('hidden');}
     if ($('cover-letter-output')) {$('cover-letter-output').value = '';}
     if ($('cover-letter-status')) {$('cover-letter-status').textContent = '';}
+    if ($('optimizer-changes')) {$('optimizer-changes').replaceChildren(); $('optimizer-changes').classList.add('hidden');}
+    if ($('optimizer-details')) {$('optimizer-details').replaceChildren(); $('optimizer-details').classList.add('hidden');}
   }
 
   // ---- localStorage session persistence ----
@@ -418,14 +424,69 @@
       return showError(resumeError);
     }
     hideError();
-    tailored = ATS.tailor(resume, $('jd-text').value.trim());
+    originalResumeText = resume;
+    optimizerReport = window.ATSOptimizer
+      ? ATSOptimizer.analyze(resume, $('jd-text').value.trim())
+      : null;
+    tailored = ATS.tailor(optimizerReport?.optimizedText || resume, $('jd-text').value.trim());
     applyOrder();
     render();
+    renderOptimizerReport();
     $('tailored-section').classList.remove('hidden');
     requestAnimationFrame(fitResumeToScreen);
     $('tailored-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     scheduleSave();
   }
+
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  function renderOptimizerReport() {
+    const r = optimizerReport;
+    if (!r || !$('optimizer-original-score')) return;
+    const original = r.original.score, improved = r.optimized.score, delta = improved - original;
+    $('optimizer-original-score').textContent = `${original}/100`;
+    $('optimizer-optimized-score').textContent = `${improved}/100`;
+    $('optimizer-improvement').textContent = `${delta >= 0 ? '+' : ''}${delta} points`;
+    const categories = $('optimizer-categories'); categories.replaceChildren();
+    Object.entries(r.optimized.checks).forEach(([name, score]) => {
+      const row = document.createElement('div'); row.className = 'flex justify-between gap-3 border-b border-slate-800 pb-1';
+      row.innerHTML = `<span>${escapeHtml(name)}</span><strong>${score}/100</strong>`; categories.append(row);
+    });
+    const summary = $('optimizer-summary'); summary.replaceChildren();
+    [
+      `${r.issues.filter(i => i.type === 'Spelling').length} spelling issue(s) checked`,
+      `${r.issues.filter(i => i.type === 'Weak wording').length} weak bullet(s) improved`,
+      `${r.changes.length} line-level change(s) made`,
+      `${r.missingKeywords.length} JD keyword(s) need evidence or review`,
+      'No facts, jobs, skills, degrees or achievements were invented',
+    ].forEach(text => { const li = document.createElement('li'); li.textContent = '✓ ' + text; summary.append(li); });
+    const warnings = $('optimizer-warnings'); warnings.replaceChildren();
+    if (r.warnings.length) { warnings.classList.remove('hidden'); const title = document.createElement('strong'); title.textContent = 'ATS warnings: '; warnings.append(title, document.createTextNode(r.warnings.join(' '))); }
+    else warnings.classList.add('hidden');
+    const details = $('optimizer-details'); details.replaceChildren();
+    r.issues.slice(0, 12).forEach(issue => {
+      const card = document.createElement('div'); card.className = 'rounded-lg bg-slate-950 border border-slate-800 p-3 text-xs';
+      card.innerHTML = `<strong>${escapeHtml(issue.type)}</strong><p class="text-slate-400 mt-1"><span class="text-rose-300">Before:</span> ${escapeHtml(issue.before)}<br><span class="text-emerald-300">After:</span> ${escapeHtml(issue.after)}<br><span class="text-slate-500">Why:</span> ${escapeHtml(issue.reason)}</p>`; details.append(card);
+    });
+  }
+  function renderOptimizerChanges() {
+    const r = optimizerReport, box = $('optimizer-changes'); if (!r || !box) return;
+    box.replaceChildren();
+    r.changes.slice(0, 30).forEach(change => {
+      const card = document.createElement('div'); card.className = 'rounded-lg border border-slate-800 bg-slate-950 p-3 text-xs';
+      card.innerHTML = `<p class="text-slate-500 mb-1">Line ${change.line} · ${change.type}</p><p class="text-rose-200 bg-rose-500/10 p-2 rounded">${escapeHtml(change.before || '(removed)')}</p><p class="text-emerald-200 bg-emerald-500/10 p-2 rounded mt-1">${escapeHtml(change.after || '(removed)')}</p>`; box.append(card);
+    });
+    box.classList.toggle('hidden', !r.changes.length);
+  }
+  function restoreOriginalResume() {
+    if (!originalResumeText) return;
+    tailored = ATS.tailor(originalResumeText, $('jd-text').value.trim()); applyOrder(); render(); flash($('restore-original-btn'), 'Restored');
+  }
+  $('show-changes-btn')?.addEventListener('click', () => {
+    const details = $('optimizer-details'); details.classList.toggle('hidden'); renderOptimizerChanges();
+    $('show-changes-btn').textContent = details.classList.contains('hidden') ? 'View Changes' : 'Hide Changes';
+  });
+  $('restore-original-btn')?.addEventListener('click', restoreOriginalResume);
+  $('download-clean-btn')?.addEventListener('click', () => { $('jd-only-toggle').checked = false; $('download-btn').click(); });
 
   $('analyze-btn').addEventListener('click', onAnalyze);
   $('tailor-btn').addEventListener('click', onTailor);
