@@ -62,6 +62,7 @@
     .replace(/([.!?]\s+)([a-z])/g, (_, punctuation, letter) => punctuation + letter.toUpperCase())
     .replace(/\bI am hardworking computer student\b/gi, 'I am a hardworking computer student');
   const capitalise = value => value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+  const CONTACT_TOKEN = /(?:[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}|https?:\/\/|www\.|linkedin\.com|github\.com|\+?\d[\d ().-]{8,}\d)/i;
   const isEntryHeader = value => /^(?:\d{4}\s*[-–]\s*\d{4}|present|college project:|mini project:|other project:|bca\b|\d+(?:th|st|nd|rd)\b)/i.test(value) || /\s[—-]\s/.test(value);
   const currentSection = value => {
     const key = lower(value);
@@ -87,6 +88,7 @@
     const original = raw;
     const value = strip(raw);
     if (!value) return { line: raw, changes: [] };
+    if (CONTACT_TOKEN.test(value)) return { line: original, changes: [] };
     if (isHeading(value)) {
       const title = headingTitle(value);
       return { line: title, changes: title !== value ? [{ type: 'Heading', before: value, after: title, reason: 'Uses a standard ATS-readable section heading.' }] : [] };
