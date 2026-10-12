@@ -446,6 +446,19 @@
 
   // FIXED: Non-global regex to avoid lastIndex mutation bug
   const PHONE_RE = /(?:\+?\d[\d ().-]{7,}\d)/;
+  function formatPhoneNumber(raw) {
+    const value = String(raw || '').trim();
+    const digits = value.replace(/\D/g, '');
+    const hasIndiaCode = /^\+?91(?:[\s().-]*)?\d{10}$/.test(value.replace(/\s+/g, '')) || (digits.length === 12 && digits.startsWith('91'));
+    const localDigits = hasIndiaCode ? digits.slice(-10) : digits;
+    if (localDigits.length === 10 && /^[6-9]\d{9}$/.test(localDigits)) {
+      return `${hasIndiaCode ? '+91 ' : ''}${localDigits.slice(0, 5)} ${localDigits.slice(5)}`;
+    }
+    if (localDigits.length === 10 && /^\d{3}\d{3}\d{4}$/.test(localDigits)) {
+      return `(${localDigits.slice(0, 3)}) ${localDigits.slice(3, 6)}-${localDigits.slice(6)}`;
+    }
+    return value.replace(/[.\-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  }
   function findPhone(value) {
     const str = String(value ?? '');
     const hit = [...str.matchAll(new RegExp(PHONE_RE.source, 'g'))].find(([raw]) => {
@@ -456,7 +469,7 @@
       // date ranges such as "2024 - 2027"
       return !/^\d{4}\s*[-–—]\s*\d{4}$/.test(raw.trim());
     });
-    return hit ? hit[0].trim().replace(/^\s*(\d{3}\)\s)/, '($1') : '';
+    return hit ? formatPhoneNumber(hit[0]) : '';
   }
   const hasPhone = value => findPhone(value) !== '';
 
@@ -2057,6 +2070,9 @@
       .replace(/\s+(?:19|20)\d{2}\s*$/, '')
       .replace(/[.]+$/, '')
       .trim();
+    const inferredRole = lines.slice(1, 30)
+      .map(line => line.replace(/^[•·●◦∙▪‣⁃‧*_-]+\s*/, '').trim())
+      .find(line => ROLE_RE.test(line) && !/@|https?:\/\/|linkedin\.com|github\.com/i.test(line) && line.length <= 100) || '';
 
     return {
       name,
@@ -2067,6 +2083,7 @@
       projects: projectTitle ? [projectTitle] : [],
       experience: linesOf('experience').map(stripBullets).slice(0, 6),
       education: linesOf('education').map(stripBullets).slice(0, 6),
+      role: inferredRole ? normalizePersonName(inferredRole.match(ROLE_RE)[1]) : '',
     };
   }
 
@@ -2149,16 +2166,23 @@
     }
     const skillLine = relevant.length
       ? ` My background includes ${joinList(relevant)}, which aligns with the capabilities relevant to this role.`
-      : ' My background has given me a strong foundation in software development and problem solving.';
+      : profile.role
+        ? ` My experience as a ${profile.role} has given me a strong foundation in problem solving, collaboration, and dependable delivery.`
+        : ' My background has given me a strong foundation in problem solving and professional development.';
+    const generalRole = profile.role || 'professional';
+    const subjectRole = jd ? job.title : generalRole;
     const intro = jd
       ? `I am writing to express my interest in the ${job.title} opportunity at ${job.company}. Based on my background and the requirements described for this role, I believe my skills and project experience are relevant to the position.`
-      : `I am writing to express my interest in software development opportunities at ${job.company}. I would welcome the opportunity to contribute my technical skills, project experience, and willingness to learn to your team.`;
+      : `I am writing to express my interest in ${generalRole} opportunities. My resume reflects my practical experience, responsibilities, and professional development, and I would welcome the opportunity to contribute those strengths to your team.`;
 
     return [
       profile.name,
+      ...(profile.role ? [profile.role] : []),
       [profile.email, profile.phone].filter(Boolean).join(' | '),
       '',
-      'Dear Hiring Manager,',
+      `Subject: Application for ${subjectRole} Role`,
+      '',
+      'Dear Hiring Team,',
       '',
       intro,
       '',
