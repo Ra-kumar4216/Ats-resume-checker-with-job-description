@@ -7,36 +7,8 @@
     optimizerReport = null,
     originalResumeText = '',
     finalResumeApproved = false;
-  const MAX_FILE_BYTES = 5 * 1024 * 1024;
-  const MAX_PDF_PAGES = 15;
-  const MAX_EXTRACTED_CHARS = 120000;
-  const MIN_RESUME_WORDS = 10;
-  const MIN_JD_WORDS = 8;
-  const scriptCache = new Map();
-  const loadScript = (src, globalName, integrity) => {
-    if (window[globalName]) {
-      return Promise.resolve(window[globalName]);
-    }
-    if (!scriptCache.has(src)) {
-      scriptCache.set(
-        src,
-        new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = src;
-          script.async = true;
-          if (integrity) {
-            script.integrity = integrity;
-            script.crossOrigin = 'anonymous';
-          }
-          script.onload = () =>
-            window[globalName] ? resolve(window[globalName]) : reject(new Error(`${globalName} unavailable`));
-          script.onerror = () => reject(new Error(`Could not load ${globalName}`));
-          document.head.append(script);
-        })
-      );
-    }
-    return scriptCache.get(src);
-  };
+  const CONFIG = window.ATSConfig;
+  const { maxExtractedChars: MAX_EXTRACTED_CHARS, minResumeWords: MIN_RESUME_WORDS, minJobDescriptionWords: MIN_JD_WORDS } = CONFIG;
 
   const words = s => s.trim().split(/\s+/).filter(Boolean).length;
   [
@@ -82,58 +54,27 @@
   }
 
   // ---- localStorage session persistence ----
-  const SESSION_KEY = 'ats-tracker-session-v1';
   function saveSession() {
-    try {
-      const state = {
-        resume: $('resume-text').value,
-        jd: $('jd-text').value,
-        mode: window.ATSStepper?.getMode?.() || 'jd',
-        highlight: $('highlight-toggle')?.checked ?? true,
-        jdOnly: $('jd-only-toggle')?.checked ?? false,
-        templateId: template?.id || 'modern-blue',
-        timestamp: Date.now(),
-      };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(state));
-    } catch (e) {
-      // Ignore quota/private mode errors
-    }
+    ATSSessionStore.write({
+      resume: $('resume-text').value,
+      jd: $('jd-text').value,
+      mode: window.ATSStepper?.getMode?.() || 'jd',
+      highlight: $('highlight-toggle')?.checked ?? true,
+      jdOnly: $('jd-only-toggle')?.checked ?? false,
+      templateId: template?.id || 'modern-blue',
+    });
   }
-  function loadSession() {
-    try {
-      const raw = localStorage.getItem(SESSION_KEY);
-      if (!raw) {return null;}
-      const state = JSON.parse(raw);
-      // Expire after 7 days
-      if (Date.now() - state.timestamp > 7 * 24 * 60 * 60 * 1000) {
-        localStorage.removeItem(SESSION_KEY);
-        return null;
-      }
-      return state;
-    } catch (e) {
-      return null;
-    }
-  }
+  function loadSession() { return ATSSessionStore.read(); }
   function restoreSession() {
     const state = loadSession();
-    if (!state) {return;}
-    if (state.resume) {
-      $('resume-text').value = state.resume;
-      $('resume-text').dispatchEvent(new Event('input'));
-    }
-    if (state.jd) {
-      $('jd-text').value = state.jd;
-      $('jd-text').dispatchEvent(new Event('input'));
-    }
-    if (state.highlight !== undefined && $('highlight-toggle')) {
-      $('highlight-toggle').checked = state.highlight;
-    }
-    if (state.jdOnly !== undefined && $('jd-only-toggle')) {
-      $('jd-only-toggle').checked = state.jdOnly;
-    }
-    // Template will be restored after templates load
+    if (!state) return;
+    if (state.resume) { $('resume-text').value = state.resume; $('resume-text').dispatchEvent(new Event('input')); }
+    if (state.jd) { $('jd-text').value = state.jd; $('jd-text').dispatchEvent(new Event('input')); }
+    if (state.highlight !== undefined && $('highlight-toggle')) $('highlight-toggle').checked = state.highlight;
+    if (state.jdOnly !== undefined && $('jd-only-toggle')) $('jd-only-toggle').checked = state.jdOnly;
     window.__pendingTemplateId = state.templateId;
   }
+
   // Auto-save on input (debounced)
   let saveTimer = null;
   function scheduleSave() {
@@ -194,18 +135,11 @@
       return;
     }
     const ext = file.name.split('.').pop().toLowerCase();
-    if (file.size > MAX_FILE_BYTES) {
-      return fail('File is too large (maximum 5MB).');
-    }
-    if (!['pdf', 'docx', 'txt'].includes(ext)) {
-      return fail('Unsupported type. Use PDF, DOCX or TXT.');
-    }
     $('upload-status').textContent = 'Extracting text…';
     hideError();
     try {
-      const buf = ext === 'txt' ? null : await file.arrayBuffer();
-      const text = ext === 'txt' ? await file.text() : ext === 'pdf' ? await readPdf(buf) : await readDocx(buf);
-      const safeText = String(text || '').trim();
+      const result = await ATSFileParser.extract(file);
+      const safeText = result.text;
       if (!safeText) {
         throw new Error('No extractable text');
       }
@@ -218,9 +152,13 @@
       scheduleSave();
     } catch (err) {
       const reason = String((err && err.message) || '').toLowerCase();
-      const message = reason.includes('too many')
-        ? 'This PDF has too many pages (maximum 15).'
-        : reason.includes('too large')
+      const message = reason.includes('file is too large')
+        ? 'File is too large (maximum 5MB).'
+        : reason.includes('unsupported file type')
+          ? 'Unsupported type. Use PDF, DOCX or TXT.'
+          : reason.includes('too many')
+            ? 'This PDF has too many pages (maximum 15).'
+            : reason.includes('too large')
           ? 'The extracted text is too large to process safely. Please paste a shorter resume.'
           : reason.includes('password')
             ? 'This PDF is password-protected. Paste the resume text instead.'
@@ -236,60 +174,6 @@
     showError(msg);
   }
 
-  async function readPdf(buf) {
-    // Vendored pdf.js (classic script, sets window.pdfjsLib) - no CDN, works with the strict CSP.
-    const pdfjsLib = await loadScript('assets/vendor/pdf.min.js', 'pdfjsLib');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.js';
-    const pdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise; // CVE-2024-4367 mitigation
-    if (pdf.numPages > MAX_PDF_PAGES) {
-      pdf.destroy();
-      throw new Error('Too many PDF pages');
-    }
-    // Two-column PDFs (LinkedIn): read every page's main column first, then the sidebars,
-    // so a section that continues on page 2 is not cut in half by the sidebar.
-    let text = '';
-    let sidebars = '';
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const content = await (await pdf.getPage(i)).getTextContent();
-      const page = ATS.pageText(content.items);
-      text += page.main + '\n';
-      sidebars += page.side ? page.side + '\n' : '';
-      if (text.length + sidebars.length > MAX_EXTRACTED_CHARS) {
-        pdf.destroy();
-        throw new Error('Extracted text is too large');
-      }
-    }
-    pdf.destroy();
-    text += sidebars;
-    if (!text.trim()) {
-      throw new Error('No extractable text');
-    }
-    return ATS.cleanExtractedText(text);
-  }
-  async function readDocx(buf) {
-    const mammoth = await loadScript('assets/vendor/mammoth.browser.min.js', 'mammoth');
-    const { value } = await mammoth.convertToHtml({ arrayBuffer: buf });
-    const body = new DOMParser().parseFromString(value, 'text/html').body;
-    const extract = el => {
-      if (/^(UL|OL)$/.test(el.tagName)) {
-        return [...el.children].map(li => '• ' + li.textContent.trim());
-      }
-      if (el.tagName === 'TABLE') {
-        return [...el.rows].map(row =>
-          [...row.cells]
-            .map(cell => cell.textContent.trim())
-            .filter(Boolean)
-            .join(' | ')
-        );
-      }
-      return [el.textContent.trim()];
-    };
-    const text = [...body.children].flatMap(extract).filter(Boolean).join('\n');
-    if (text.length > MAX_EXTRACTED_CHARS) {
-      throw new Error('Extracted text is too large');
-    }
-    return text;
-  }
 
   // ---- analyze ----
   function tags(el, items, cls, empty) {
@@ -422,16 +306,8 @@
     fitResumeToScreen();
     schedulePageFitNote();
   }
-  async function requestGeminiAnalysis(resume, jd) {
-    const response = await fetch('/api/analyze-resume', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ resumeText: resume, jobDescription: jd }),
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || 'AI analysis unavailable');
-    return payload;
-  }
+  async function requestGeminiAnalysis(resume, jd) { return ATSApi.analyzeResume(resume, jd); }
+
   function mergeAIReport(resume, jd, ai) {
     const local = ATSOptimizer.analyze(resume, jd);
     const optimizedText = String(ai.optimizedResume || '').trim();
@@ -704,7 +580,7 @@
   });
   // ---- DOCX export ----
   async function loadDocx() {
-    return loadScript('assets/vendor/docx.umd.js', 'docx');
+    return ATSExternalScript.load('assets/vendor/docx.umd.js', 'docx');
   }
   function buildDocxDocument(sections, template, fit = { zoom: 1, gap: 1 }) {
     const {
