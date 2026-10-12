@@ -342,7 +342,8 @@
       optimizerReport = mergeAIReport(resume, jd, ai);
     } catch (error) {
       optimizerReport = window.ATSOptimizer ? ATSOptimizer.analyze(resume, jd) : null;
-      if ($('optimizer-status')) {$('optimizer-status').textContent = `Gemini unavailable: ${error.message} Local full-document fallback is active.`;}
+      const reason = typeof error?.message === 'string' && error.message.trim() ? error.message.trim() : 'AI service unavailable.';
+      if ($('optimizer-status')) {$('optimizer-status').textContent = `Gemini unavailable: ${reason} Local full-document fallback is active.`;}
       if ($('optimizer-provider')) {$('optimizer-provider').textContent = 'Local fallback';}
     } finally {
       if (button) {button.disabled = false; button.textContent = 'Generate Tailored Resume →';}
