@@ -462,9 +462,23 @@
     if (!source || !page) {return;}
     page.replaceChildren();
     const text = source.value.trim();
-    text.split(/\n\s*\n/).filter(Boolean).forEach(paragraph => {
+    text.split(/\n\s*\n/).filter(Boolean).forEach((paragraph, index) => {
+      if (index === 0) {
+        const header = document.createElement('header');
+        header.className = 'cover-letter-header';
+        paragraph.split('\n').map(line => line.trim()).filter(Boolean).forEach((line, lineIndex, lines) => {
+          const item = document.createElement('div');
+          item.className = lineIndex === 0 ? 'cover-letter-name' : lineIndex === lines.length - 1 ? 'cover-letter-contact' : 'cover-letter-role';
+          item.textContent = line;
+          header.appendChild(item);
+        });
+        page.appendChild(header);
+        return;
+      }
       const p = document.createElement('p');
       p.textContent = paragraph.trim();
+      if (/^Subject:/i.test(paragraph.trim())) p.className = 'cover-letter-subject';
+      if (/^Dear /i.test(paragraph.trim())) p.className = 'cover-letter-greeting';
       page.appendChild(p);
     });
   }
@@ -500,14 +514,37 @@
     try {
       const docxLib = await loadDocx();
       if (!docxLib) {throw new Error('docx library failed to load');}
-      const { Document, Packer, Paragraph, TextRun, AlignmentType } = docxLib;
+      const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle } = docxLib;
       const lines = $('cover-letter-output').value.split('\n');
-      const children = lines.map(line => new Paragraph({
-        children: [new TextRun({ text: line, size: 24, font: 'Calibri' })],
-        spacing: { line: 276, after: 60 },
-        alignment: AlignmentType.LEFT,
-      }));
-      const doc = new Document({ sections: [{ properties: {}, children }] });
+      const firstBreak = lines.indexOf('');
+      const headerLines = (firstBreak >= 0 ? lines.slice(0, firstBreak) : lines).filter(Boolean);
+      const rest = firstBreak >= 0 ? lines.slice(firstBreak + 1) : [];
+      const subjectIndex = rest.findIndex(line => /^Subject:/i.test(line));
+      const children = [];
+      headerLines.forEach((line, index) => {
+        const isName = index === 0;
+        const isContact = index === headerLines.length - 1;
+        children.push(new Paragraph({
+          children: [new TextRun({ text: line, bold: isName || !isContact, color: isName ? '111827' : isContact ? '4B5563' : '2563EB', size: isName ? 30 : isContact ? 18 : 19, font: isName ? 'Times New Roman' : 'Calibri' })],
+          alignment: AlignmentType.CENTER,
+          spacing: { after: isContact ? 90 : 20 },
+          border: isContact ? { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'B7B7B7', space: 4 } } : undefined,
+        }));
+      });
+      rest.forEach((line, index) => {
+        if (!line) {
+          children.push(new Paragraph({ text: '', spacing: { after: 80 } }));
+          return;
+        }
+        const subject = index === subjectIndex;
+        const greeting = /^Dear /i.test(line);
+        children.push(new Paragraph({
+          children: [new TextRun({ text: line, bold: subject, size: subject ? 22 : 22, font: 'Times New Roman' })],
+          alignment: AlignmentType.LEFT,
+          spacing: { line: 276, after: subject || greeting ? 140 : 90 },
+        }));
+      });
+      const doc = new Document({ sections: [{ properties: { page: { margin: { top: 720, bottom: 720, left: 1020, right: 1020 } } }, children }] });
       const blob = await docxLib.Packer.toBlob(doc);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
