@@ -95,14 +95,23 @@ html{scroll-behavior:smooth}
 .step-nav-btn--primary:hover{filter:brightness(1.08)}
 
 /* Cover letter page + print/PDF */
-#cover-letter-print-page{display:none;background:#fff;color:#1a1a1a;max-width:760px;margin:0 auto;padding:42px 48px;min-height:980px;font-family:Calibri,Arial,sans-serif;font-size:12.5pt;line-height:1.65}
-#cover-letter-print-page p{margin:0 0 16px;white-space:pre-wrap}
+#cover-letter-print-page{display:none;background:#fff;color:#1a1a1a;max-width:760px;margin:0 auto;padding:42px 48px;min-height:980px;font-family:"Times New Roman",Times,serif;font-size:12pt;line-height:1.55}
+#cover-letter-print-page .cover-letter-header{text-align:center;border-bottom:1px solid #b7b7b7;padding-bottom:10px;margin-bottom:16px}
+#cover-letter-print-page .cover-letter-name{font-family:"Times New Roman",Times,serif;font-size:17pt;font-weight:700;line-height:1.1}
+#cover-letter-print-page .cover-letter-role{font-family:Calibri,Arial,sans-serif;color:#2563eb;font-size:10pt;font-weight:700;line-height:1.25;margin-top:2px}
+#cover-letter-print-page .cover-letter-contact{font-family:Calibri,Arial,sans-serif;color:#4b5563;font-size:8.5pt;line-height:1.35;margin-top:6px}
+#cover-letter-print-page p{margin:0 0 15px;white-space:pre-wrap}
+#cover-letter-print-page .cover-letter-subject{font-weight:700;margin-bottom:20px}
+#cover-letter-print-page .cover-letter-greeting{margin-bottom:17px}
 body.print-cover-letter > *:not(#cover-letter-print-page){display:none!important}
 body.print-cover-letter #cover-letter-print-page{display:block!important}
 body.print-cover-letter{background:#fff!important}
 @media print{
   body.print-cover-letter #cover-letter-print-page{display:block!important;max-width:none!important;width:auto!important;margin:0!important;padding:16mm 18mm!important;min-height:0!important;background:#fff!important;color:#111!important}
-  body.print-cover-letter #cover-letter-print-page p{font-size:12pt;line-height:1.6;margin:0 0 14pt}
+  body.print-cover-letter #cover-letter-print-page p{font-size:11.5pt;line-height:1.55;margin:0 0 12pt}
+  body.print-cover-letter #cover-letter-print-page .cover-letter-name{font-size:16pt}
+  body.print-cover-letter #cover-letter-print-page .cover-letter-role{font-size:9.5pt}
+  body.print-cover-letter #cover-letter-print-page .cover-letter-contact{font-size:8.5pt}
 }
 
 .template-picker-card #template-select{margin-left:0;margin-top:8px;min-width:280px;padding:9px 12px;font-size:.875rem}
