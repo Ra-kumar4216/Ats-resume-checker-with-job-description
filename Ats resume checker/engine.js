@@ -456,7 +456,7 @@
       // date ranges such as "2024 - 2027"
       return !/^\d{4}\s*[-–—]\s*\d{4}$/.test(raw.trim());
     });
-    return hit ? hit[0].trim() : '';
+    return hit ? hit[0].trim().replace(/^\s*(\d{3}\)\s)/, '($1') : '';
   }
   const hasPhone = value => findPhone(value) !== '';
 
@@ -1971,18 +1971,41 @@
 
   function extractJobProfile(jd) {
     const text = String(jd || '').trim();
+    const natural = text.match(/(?:hiring|looking for|seeking)\s+(?:an?|the)?\s*([A-Za-z][A-Za-z .&/-]{2,70}?)\s+at\s+([A-Z][A-Za-z0-9&.,' -]{1,70}?)(?=\s+(?:to|who|with|for)\b|[.,\n]|$)/i);
     const title = firstMatch(text, /(?:job\s*title|position|role)\s*[:-]\s*([^\n|]{2,80})/i) ||
+      (natural ? natural[1] : '') ||
       firstMatch(text, /(?:hiring|looking for|seeking)\s+(?:an?|the)?\s*([A-Za-z][A-Za-z .&/-]{2,70}?)(?:\s+(?:to|who|with|for)\b|[.\n])/i) ||
       'the position';
-    const company = firstMatch(text, /(?:company|employer|organization)\s*[:-]\s*([^\n|]{2,80})/i) || 'your organization';
-    return { title, company };
+    const company = firstMatch(text, /(?:company|employer|organization)\s*[:-]\s*([^\n|]{2,80})/i) ||
+      (natural ? natural[2] : '') || 'your organization';
+    return { title: normalizePersonName(title), company: normalizePersonName(company) };
   }
 
 
   const DATE_TAIL = /\s*(?:\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+)?\b(?:19|20)\d{2}\b.*$/i;
   const ROLE_RE =
     /^(.*?\b(?:developer|engineer|intern|analyst|designer|consultant|trainee|associate|architect|tester|programmer|scientist|administrator|specialist|lead|manager)s?(?:\s+(?:intern|trainee|apprentice))?)\b/i;
-  const tidyCase = v => (/[a-z]/.test(v) && v === v.toLowerCase() ? v.replace(/\b\w/g, c => c.toUpperCase()) : v);
+  const tidyCase = v => String(v || '').split(/(\s+|-)/).map(part => {
+    if (!part || /^\s+$/.test(part) || part === '-') return part;
+    if (/^[A-Z0-9.&+/#-]+$/.test(part) && part.length <= 6) return part;
+    return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+  }).join('');
+  const displaySkill = value => {
+    const key = String(value || '').toLowerCase().trim();
+    const names = {
+      javascript: 'JavaScript', typescript: 'TypeScript', 'node.js': 'Node.js', node: 'Node.js',
+      react: 'React', 'next.js': 'Next.js', python: 'Python', java: 'Java', sql: 'SQL',
+      html: 'HTML', css: 'CSS', aws: 'AWS', api: 'API', 'rest api': 'REST API', 'rest apis': 'REST APIs',
+      postgresql: 'PostgreSQL', mongodb: 'MongoDB', docker: 'Docker', kubernetes: 'Kubernetes',
+      git: 'Git', github: 'GitHub', 'machine learning': 'Machine Learning', 'artificial intelligence': 'Artificial Intelligence',
+    };
+    return names[key] || tidyCase(value);
+  };
+  const normalizePersonName = value => String(value || '').replace(/\s+/g, ' ').trim().split(' ').map(part => {
+    if (!part) return part;
+    if (/^(mc|mac)$/i.test(part)) return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+    return part.split('-').map(piece => piece ? piece.charAt(0).toUpperCase() + piece.slice(1).toLowerCase() : piece).join('-');
+  }).join(' ');
   const joinList = items => (items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : items[0] || '');
 
   function extractResumeProfile(resumeText) {
@@ -1991,18 +2014,20 @@
     const email = firstMatch(text, EMAIL_RE);
     const phone = findPhone(text);
     const rawName =
-      lines.find(line => {
+      lines.slice(0, 12).map(line => line.split(/\s+[|·•]\s+|\s{3,}/)[0].trim()).find(line => {
         const clean = line.replace(/[^A-Za-z .'-]/g, ' ').replace(/\s+/g, ' ').trim();
         return (
           clean &&
           clean.split(/\s+/).length >= 2 &&
           clean.split(/\s+/).length <= 5 &&
+          clean.length <= 70 &&
           !/@/.test(clean) &&
           !/\d/.test(clean) &&
-          !/^(resume|curriculum vitae|cv)$/i.test(clean)
+          !/^(resume|curriculum vitae|cv|summary|profile|experience|education|skills|projects|contact|professional summary)$/i.test(clean) &&
+          !/\b(?:developer|engineer|analyst|designer|manager|consultant|student|specialist)\b/i.test(clean)
         );
       }) || 'Candidate';
-    const name = /[a-z]/.test(rawName) ? rawName : tidyCase(rawName.toLowerCase());
+    const name = normalizePersonName(rawName);
 
     const sections = parseSections(text);
     const linesOf = key => {
@@ -2056,6 +2081,7 @@
         .replace(DATE_TAIL, '')
         .replace(/\s*\(\s*\d+\s*(?:months?|years?|yrs?|mos?)[^)]*\)/gi, '')
         .replace(/\s{2,}.*$/, '')
+        .replace(/\s*[|–—-]\s*$/, '')
         .trim();
     const first = strip(list[0]);
     const second = list[1] ? strip(list[1]) : '';
@@ -2091,8 +2117,10 @@
     const clean = l => l.replace(DATE_TAIL, '').replace(/\s{2,}.*$/, '').replace(/[\s·•]+$/, '').trim();
     const degRow = list.find(l => DEG.test(l));
     const instRow = list.find(l => INST.test(l) && l !== degRow);
-    const degree = degRow ? clean(degRow).replace(/^(.*?\))\s+.*$/, '$1') : '';
-    const institution = instRow ? clean(instRow).split(',')[0].trim() : '';
+    const degreeParts = degRow ? clean(degRow).split(/\s+[|–—]\s+|\s+-\s+/).map(v => v.trim()).filter(Boolean) : [];
+    const degree = degreeParts[0] ? degreeParts[0].replace(/^(.*?\))\s+.*$/, '$1') : '';
+    const institution = instRow ? clean(instRow).split(/\s+[|–—]\s+|\s+-\s+|,/)[0].trim() :
+      (degreeParts[1] && INST.test(degreeParts[1]) ? degreeParts[1] : '');
     const years = (list.join(' ').match(/\b(?:19|20)\d{2}\b/g) || []).map(Number);
     const pursuing = /\b(?:present|current(?:ly)?|pursuing)\b/i.test(list.join(' ')) || Math.max(0, ...years) >= new Date().getFullYear();
     if (degree && institution) {
@@ -2110,7 +2138,7 @@
     const profile = extractResumeProfile(text);
     const job = extractJobProfile(jd);
     const keywords = jd ? extractKeywords(jd).filter(k => pattern(k).test(text)).slice(0, 6) : [];
-    const relevant = keywords.length ? keywords : profile.skillItems.slice(0, 5);
+    const relevant = (keywords.length ? keywords : profile.skillItems.slice(0, 5)).map(displaySkill);
     const projectLine = profile.projects[0]
       ? ` Through my project work, including ${profile.projects[0]}, I have applied these skills in practical, hands-on work.`
       : '';
